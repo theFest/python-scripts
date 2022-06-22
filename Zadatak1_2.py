@@ -1,3 +1,18 @@
+"""
+The following rules apply to blood transfusions:
+*blood group 0 can only receive blood group 0
+*blood group A can receive blood group A or 0
+*blood group B can receive blood group B or 0
+*blood group AB can receive all blood groups
+*person with a negative Rh factor can only receive a blood group with also a negative Rh factor
+*person with a positive Rh factor can receive any blood type Rh factor
+Eg. a person with blood group A + can receive A +, A-, 0+ and 0-, a person with
+B- can receive B- and 0-, while someone with blood group 0- can receive only
+0- blood type. Ask the user's blood type and Rh factor of the donor and recipient,
+and print if a blood transfusion is allowed for that combination.
+Note: as a simplification, it is allowed to name the blood group "AB" to "C".
+"""
+
 import autopy
 
 
@@ -23,4 +38,3 @@ elif bg == "ab" and rhr != "negative":
     print("All groups | Donor can accept both RH's")
 else:
     print("Try again with specified types")
-
