@@ -1,3 +1,5 @@
+""" program that converts kilometers to miles. It uses a while loop to repeatedly ask the user to input a number of kilometers they want to convert """
+
 print("H! This is a program that converts kilometers into miles.")
 
 while True:
