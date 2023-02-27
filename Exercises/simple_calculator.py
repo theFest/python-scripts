@@ -1,17 +1,22 @@
 """ New version, the calculator functions have been separated into their own functions and a calculate function has been added to call the appropriate function based on the selected operator.
 The script includes includes error handling for division by 0 and for invalid operators and has been made into a loop so that the user can perform multiple calculations without having to restart the script. The loop will only end when the user decides to stop performing calculations. """
 
+
 def add(x, y):
     return x + y
+
 
 def subtract(x, y):
     return x - y
 
+
 def multiply(x, y):
     return x * y
 
+
 def divide(x, y):
     return x / y
+
 
 def calculate(x, y, operation):
     if operation == "+":
@@ -27,6 +32,7 @@ def calculate(x, y, operation):
     else:
         return "Error: Invalid operator."
 
+
 while True:
     x = int(input("First value: "))
     y = int(input("Second value: "))
@@ -38,4 +44,4 @@ while True:
     if repeat.lower() != "yes":
         break
 
-print("Ending Calculator!")
+print("Ending calculator!")
