@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 mood = input("What is your mood today? ")
 
 if mood == "happy":
