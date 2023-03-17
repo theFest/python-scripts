@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Mar 17 23:55:13 2023
+
+@author: fwhite
+"""
+
 """
 The following rules apply to blood transfusions:
 *blood group 0 can only receive blood group 0
@@ -14,6 +21,8 @@ Note: as a simplification, it is allowed to name the blood group "AB" to "C".
 """
 
 import autopy
+
+# pip install autopy
 
 
 bg = str(input("Enter Blood Group (0, a, b or ab) :"))
