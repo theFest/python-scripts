@@ -1,12 +1,22 @@
+""" A function to check if a password is strong, based on a set of criteria such as having at least one uppercase letter, one lowercase letter, one digit, one special character, and being at least 8 characters long.
+A function to get user input for password length.
+A menu option to save a generated password to a file.
+A menu option to read saved passwords from a file.
+This script should be quite robust and offer a range of """
+
+
 import random
 
 
 def generate_password(length):
     password = ""
-    characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*()_+"
+    characters = (
+        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*()_+"
+    )
     for i in range(length):
         password += random.choice(characters)
     return password
+
 
 def is_strong_password(password):
     if not any(char.isupper() for char in password):
@@ -26,7 +36,6 @@ def is_strong_password(password):
         return False
 
     return True
-
 
 
 def get_password_length():
