@@ -15,31 +15,63 @@ from PyQt5.QtWidgets import (
     QCheckBox,
     QHBoxLayout,
     QProgressBar,
+    QSpinBox,
+    QToolTip,
 )
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
+
+dark_theme_style = """
+QMainWindow {
+    background-color: #202020;
+    color: #FFFFFF;
+}
+QLabel, QLineEdit, QPlainTextEdit, QPushButton, QCheckBox, QProgressBar, QSpinBox {
+    background-color: #404040;
+    color: #FFFFFF;
+    border: 1px solid #FFFFFF;
+    padding: 5px;
+}
+QPlainTextEdit {
+    font-family: Consolas, Courier, monospace;
+}
+QPushButton:hover {
+    background-color: #606060;
+}
+QToolTip {
+    color: #FFFFFF;
+    background-color: #303030;
+    border: 1px solid #FFFFFF;
+}
+"""
 
 
 class SSHConnectionThread(QThread):
     log_updated = pyqtSignal(str)
 
-    def __init__(self, host, username, password, ssh_key, deployment_commands):
+    def __init__(
+        self, host, port, username, password, ssh_key, deployment_commands, timeout
+    ):
         super().__init__()
         self.host = host
+        self.port = port
         self.username = username
         self.password = password
         self.ssh_key = ssh_key
         self.deployment_commands = deployment_commands
+        self.timeout = timeout
 
     def run(self):
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         try:
-            if self.ssh_key:
-                ssh.connect(
-                    self.host, username=self.username, key_filename=self.ssh_key
-                )
-            else:
-                ssh.connect(self.host, username=self.username, password=self.password)
+            ssh.connect(
+                self.host,
+                port=self.port,
+                username=self.username,
+                password=self.password,
+                key_filename=self.ssh_key,
+                timeout=self.timeout,
+            )
 
             self.log_updated.emit(f"Successfully connected to {self.host}")
 
@@ -56,6 +88,14 @@ class SSHConnectionThread(QThread):
             self.log_updated.emit(f"SSH error occurred for {self.host}: {e}")
         except paramiko.BadHostKeyException as e:
             self.log_updated.emit(f"Bad host key for {self.host}: {e}")
+        except paramiko.AuthenticationException as e:
+            self.log_updated.emit(f"Authentication failed for {self.host}: {e}")
+        except paramiko.SSHException as e:
+            self.log_updated.emit(f"SSH error occurred for {self.host}: {e}")
+        except paramiko.BadHostKeyException as e:
+            self.log_updated.emit(f"Bad host key for {self.host}: {e}")
+        except paramiko.ssh_exception.NoValidConnectionsError as e:
+            self.log_updated.emit(f"Connection error for {self.host}: {e}")
         except Exception as e:
             self.log_updated.emit(f"Error connecting to {self.host}: {e}")
         finally:
@@ -115,6 +155,34 @@ class SSHDeployApp(QMainWindow):
 
         self.deployment_text_area = QPlainTextEdit()
         layout.addWidget(self.deployment_text_area)
+
+        options_layout = QHBoxLayout()
+
+        port_label = QLabel("Port:")
+        options_layout.addWidget(port_label)
+
+        self.port_spin_box = QSpinBox()
+        self.port_spin_box.setRange(1, 65535)
+        self.port_spin_box.setValue(22)
+        options_layout.addWidget(self.port_spin_box)
+
+        timeout_label = QLabel("Timeout (s):")
+        options_layout.addWidget(timeout_label)
+
+        self.timeout_spin_box = QSpinBox()
+        self.timeout_spin_box.setRange(1, 600)
+        self.timeout_spin_box.setValue(30)
+        options_layout.addWidget(self.timeout_spin_box)
+
+        self.save_settings_button = QPushButton("Save Settings")
+        self.save_settings_button.clicked.connect(self.save_settings)
+        options_layout.addWidget(self.save_settings_button)
+
+        self.load_settings_button = QPushButton("Load Settings")
+        self.load_settings_button.clicked.connect(self.load_settings)
+        options_layout.addWidget(self.load_settings_button)
+
+        layout.addLayout(options_layout)
 
         self.log_label = QLabel("Deployment Log:")
         layout.addWidget(self.log_label)
@@ -217,8 +285,17 @@ class SSHDeployApp(QMainWindow):
                         total_hosts -= 1
                         continue
 
+                    port = self.port_spin_box.value()
+                    timeout = self.timeout_spin_box.value()
+
                     thread = SSHConnectionThread(
-                        host, username, password, ssh_key, deployment_commands
+                        host,
+                        port,
+                        username,
+                        password,
+                        ssh_key,
+                        deployment_commands,
+                        timeout,
                     )
                     thread.log_updated.connect(self.add_log)
                     thread.finished.connect(self.update_progress)
@@ -254,9 +331,61 @@ class SSHDeployApp(QMainWindow):
             with open(file_path, "w") as file:
                 file.write(self.log_text_area.toPlainText())
 
+    def save_settings(self):
+        options = QFileDialog.Options()
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Settings to File",
+            "",
+            "INI Files (*.ini);;All Files (*)",
+            options=options,
+        )
+        if file_path:
+            settings = {
+                "port": self.port_spin_box.value(),
+                "timeout": self.timeout_spin_box.value(),
+                "ssh_key": self.ssh_key_line_edit.text(),
+                "deployment_commands": self.deployment_text_area.toPlainText(),
+            }
+            with open(file_path, "w") as file:
+                for key, value in settings.items():
+                    file.write(f"{key}={value}\n")
+
+    def load_settings(self):
+        options = QFileDialog.Options()
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Load Settings from File",
+            "",
+            "INI Files (*.ini);;All Files (*)",
+            options=options,
+        )
+        if file_path:
+            with open(file_path, "r") as file:
+                settings = {}
+                for line in file:
+                    key, value = line.strip().split("=")
+                    settings[key] = value
+
+                if "port" in settings:
+                    self.port_spin_box.setValue(int(settings["port"]))
+
+                if "timeout" in settings:
+                    self.timeout_spin_box.setValue(int(settings["timeout"]))
+
+                if "ssh_key" in settings:
+                    self.ssh_key_line_edit.setText(settings["ssh_key"])
+
+                if "deployment_commands" in settings:
+                    self.deployment_text_area.setPlainText(
+                        settings["deployment_commands"]
+                    )
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    app.setStyleSheet(dark_theme_style)
+    QToolTip.setFont(app.font())
     window = SSHDeployApp()
     window.show()
     sys.exit(app.exec_())
