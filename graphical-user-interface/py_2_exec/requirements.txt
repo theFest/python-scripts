@@ -1,0 +1,6 @@
+shlex
+tkinter
+ttkthemes
+PyInstaller
+cx_Freeze
+py2exe

@@ -11,46 +11,46 @@ LIBRARIES = {
     "Windows": {
         "PyInstaller": {
             "command": "pyinstaller",
-            "options": "--onefile",
+            "options": ["--onefile"],
             "tooltip": "Freezes Python scripts into stand-alone executables",
         },
         "cx_Freeze": {
             "command": "cxfreeze",
-            "options": "",
+            "options": [],
             "tooltip": "Creates executables from Python scripts",
         },
         "py2exe": {
             "command": "py2exe",
-            "options": "",
+            "options": [],
             "tooltip": "Converts Python scripts into executable Windows programs",
         },
     },
     "Mac": {
         "cx_Freeze": {
             "command": "cxfreeze",
-            "options": "",
+            "options": [],
             "tooltip": "Creates executables from Python scripts",
         },
         "py2app": {
             "command": "py2app",
-            "options": "",
+            "options": [],
             "tooltip": "Converts Python scripts into macOS applications",
         },
     },
     "Linux": {
         "PyInstaller": {
             "command": "pyinstaller",
-            "options": "--onefile",
+            "options": ["--onefile"],
             "tooltip": "Freezes Python scripts into stand-alone executables",
         },
         "PyInstaller2": {
             "command": "pyinstaller2",
-            "options": "--onefile",
+            "options": ["--onefile"],
             "tooltip": "Freezes Python scripts into stand-alone executables (alternative)",
         },
         "cx_Freeze": {
             "command": "cxfreeze",
-            "options": "",
+            "options": [],
             "tooltip": "Creates executables from Python scripts",
         },
     },
@@ -86,6 +86,7 @@ class PythonToExecutableApp:
         self.selected_library = tk.StringVar()
         self.output_dir = tk.StringVar()
         self.output_filename = tk.StringVar()
+        self.icon_path = tk.StringVar()
         self.selected_file_label_text = tk.StringVar()
 
         self.create_main_frame()
@@ -180,6 +181,21 @@ class PythonToExecutableApp:
         )
         self.selected_file_label.grid(row=1, column=0, columnspan=2, sticky=tk.W)
 
+        # Icon selection
+        icon_frame = ttk.Frame(home_frame)
+        icon_frame.pack(pady=20)
+
+        icon_label = ttk.Label(icon_frame, text="Icon File:")
+        icon_label.grid(row=0, column=0, sticky=tk.W)
+
+        icon_entry = ttk.Entry(icon_frame, textvariable=self.icon_path, width=50)
+        icon_entry.grid(row=0, column=1, padx=10)
+
+        icon_button = ttk.Button(
+            icon_frame, text="Select Icon", command=self.select_icon
+        )
+        icon_button.grid(row=0, column=2, padx=10)
+
     def select_file(self):
         file_path = filedialog.askopenfilename(
             filetypes=(("Python Files", "*.py"), ("All Files", "*.*"))
@@ -191,6 +207,12 @@ class PythonToExecutableApp:
     def select_output_dir(self):
         output_dir = filedialog.askdirectory()
         self.output_dir.set(output_dir)
+
+    def select_icon(self):
+        icon_path = filedialog.askopenfilename(
+            filetypes=(("Icon Files", "*.ico"), ("All Files", "*.*"))
+        )
+        self.icon_path.set(icon_path)
 
     def create_build_section(self):
         build_frame = ttk.Frame(self.content_frame)
@@ -275,7 +297,9 @@ class PythonToExecutableApp:
 
         4. Select the output directory where you want the executable to be saved by clicking the 'Select Folder' button.
 
-        5. Click the 'Build' button to start the conversion process. The status bar at the bottom will show the progress.
+        5. Optionally, select an icon file for your executable by clicking the 'Select Icon' button.
+
+        6. Click the 'Build' button to start the conversion process. The status bar at the bottom will show the progress.
 
         Note: This tool requires the selected library to be installed on your system.
 
@@ -303,6 +327,7 @@ class PythonToExecutableApp:
         library = self.selected_library.get()
         output_dir = self.output_dir.get()
         output_filename = self.output_filename.get()
+        icon_path = self.icon_path.get()
 
         if not file_path:
             messagebox.showwarning("Error", "Please select a Python file.")
@@ -323,40 +348,6 @@ class PythonToExecutableApp:
         if not output_filename:
             messagebox.showwarning("Error", "Please enter an output filename.")
             return
-
-        library_info = LIBRARIES.get(platform, {}).get(library)
-        if not library_info:
-            messagebox.showwarning("Error", "Invalid library selection.")
-            return
-
-        build_command = library_info["command"]
-        build_options = library_info["options"]
-        build_extension = BUILD_OPTIONS.get(platform, {}).get("extension", "")
-
-        output_path = os.path.join(output_dir, f"{output_filename}.{build_extension}")
-
-        self.status_label.config(text="Building...")
-        self.window.update()
-
-        pyinstaller_command = [
-            "pyinstaller",
-            "--onefile",
-            "--name",
-            output_filename,
-            "--distpath",
-            output_dir,
-            *build_options,
-            file_path,
-        ]
-        try:
-            subprocess.run(pyinstaller_command, check=True)
-        except subprocess.CalledProcessError:
-            self.status_label.config(text="Build failed!")
-            messagebox.showerror(
-                "Build Failed", "An error occurred during the build process."
-            )
-            return
-
 
         library_info = LIBRARIES.get(platform, {}).get(library)
         if not library_info:
@@ -374,166 +365,24 @@ class PythonToExecutableApp:
 
         build_command_list = [
             build_command,
-            *shlex.split(build_options),
-            "--name",
-            output_filename,
-            "--distpath",
-            output_dir,
-            file_path,
-        ]
-
-        print(
-            "Build Command:", " ".join(build_command_list)
-        )
-
-        library_info = LIBRARIES.get(platform, {}).get(library)
-        if not library_info:
-            messagebox.showwarning("Error", "Invalid library selection.")
-            return
-
-        build_command = library_info["command"]
-        build_options = library_info["options"]
-        build_extension = BUILD_OPTIONS.get(platform, {}).get("extension", "")
-
-        output_path = os.path.join(output_dir, f"{output_filename}.{build_extension}")
-
-        self.status_label.config(text="Building...")
-        self.window.update()
-
-        pyinstaller_command = [
-            "pyinstaller",
-            "--onefile",
-            "--name",
-            output_filename,
-            "--distpath",
-            output_dir,
             *build_options,
-            shlex.quote(file_path),
+            "--name",
+            output_filename,
+            "--distpath",
+            output_dir,
         ]
 
-        print(
-            "PyInstaller Command:", " ".join(pyinstaller_command)
-        )
+        if icon_path:
+            build_command_list.extend(["--icon", icon_path])
+
+        build_command_list.append(file_path)
 
         try:
-            subprocess.run(pyinstaller_command, check=True)
-        except subprocess.CalledProcessError:
+            subprocess.run(build_command_list, check=True)
+            self.status_label.config(text="Build completed successfully.")
+        except subprocess.CalledProcessError as e:
             self.status_label.config(text="Build failed!")
-            messagebox.showerror(
-                "Build Failed", "An error occurred during the build process."
-            )
-            return
-        
-        build_command = library_info["command"]
-        build_options = library_info["options"]
-        build_extension = BUILD_OPTIONS.get(platform, {}).get("extension", "")
-
-        output_path = os.path.join(output_dir, f"{output_filename}.{build_extension}")
-
-        self.status_label.config(text="Building...")
-        self.window.update()
-
-        pyinstaller_command = [
-            "pyinstaller",
-            "--onefile",
-            "--name",
-            output_filename,
-            "--distpath",
-            output_dir,
-            *build_options,
-            shlex.quote(file_path),
-        ]
-        try:
-            subprocess.run(pyinstaller_command, check=True)
-        except subprocess.CalledProcessError:
-            self.status_label.config(text="Build failed!")
-            messagebox.showerror(
-                "Build Failed", "An error occurred during the build process."
-            )
-            return
-
-        output_path = os.path.join(output_dir, f"{output_filename}.{build_extension}")
-
-        self.status_label.config(text="Building...")
-        self.window.update()
-
-        pyinstaller_command = [
-            "pyinstaller",
-            "--onefile",
-            "--name",
-            output_filename,
-            "--distpath",
-            output_dir,
-            *build_options,
-            file_path,
-        ]
-        try:
-            subprocess.run(pyinstaller_command, check=True)
-        except subprocess.CalledProcessError:
-            self.status_label.config(text="Build failed!")
-            messagebox.showerror(
-                "Build Failed", "An error occurred during the build process."
-            )
-            return
-
-        file_path = self.file_path.get()
-        platform = self.selected_platform.get()
-        library = self.selected_library.get()
-        output_dir = self.output_dir.get()
-        output_filename = self.output_filename.get()
-
-        if not file_path:
-            messagebox.showwarning("Error", "Please select a Python file.")
-            return
-
-        if not platform:
-            messagebox.showwarning("Error", "Please select a platform.")
-            return
-
-        if not library:
-            messagebox.showwarning("Error", "Please select a library.")
-            return
-
-        if not output_dir:
-            messagebox.showwarning("Error", "Please select an output directory.")
-            return
-
-        if not output_filename:
-            messagebox.showwarning("Error", "Please enter an output filename.")
-            return
-
-        library_info = LIBRARIES.get(platform, {}).get(library)
-        if not library_info:
-            messagebox.showwarning("Error", "Invalid library selection.")
-            return
-
-        build_command = library_info["command"]
-        build_options = library_info["options"]
-        build_extension = BUILD_OPTIONS.get(platform, {}).get("extension", "")
-
-        output_path = os.path.join(output_dir, f"{output_filename}.{build_extension}")
-
-        self.status_label.config(text="Building...")
-        self.window.update()
-
-        pyinstaller_command = [
-            "pyinstaller",
-            file_path,
-            "--onefile",
-            "--name",
-            output_filename,
-            "--distpath",
-            output_dir,
-            *build_options,
-        ]
-        try:
-            subprocess.run(pyinstaller_command, check=True)
-        except subprocess.CalledProcessError:
-            self.status_label.config(text="Build failed!")
-            messagebox.showerror(
-                "Build Failed", "An error occurred during the build process."
-            )
-            return
+            messagebox.showerror("Build Failed", f"An error occurred: {e}")
 
     def update_clock(self):
         current_time = time.strftime("%Y-%m-%d %H:%M:%S")
