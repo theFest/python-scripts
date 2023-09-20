@@ -136,7 +136,7 @@ class AboutDialog(QDialog):
 
         layout = QVBoxLayout()
 
-        label = QLabel("Kali Package Manager by theFest - v0.0.1")
+        label = QLabel("Kali Package Manager by theFest - v0.0.2")
         layout.addWidget(label)
 
         self.setLayout(layout)
@@ -149,7 +149,7 @@ class PackageManagerApp(QMainWindow):
         self.init_ui()
 
     def init_ui(self):
-        self.setWindowTitle("Kali Linux Package Manager")
+        self.setWindowTitle("Kali Package Manager")
         self.setGeometry(100, 100, 800, 600)
 
         self.central_widget = QWidget()
@@ -199,7 +199,6 @@ class PackageManagerApp(QMainWindow):
         self.package_list.setContextMenuPolicy(Qt.CustomContextMenu)
         self.package_list.customContextMenuRequested.connect(self.show_context_menu)
 
-        # Create an instance of PreferencesDialog
         self.preferences_dialog = PreferencesDialog()
 
     def set_dark_theme(self):
@@ -301,9 +300,10 @@ class PackageManagerApp(QMainWindow):
             bg_color = self.preferences_dialog.preferences["bg_color"].name()
             font_str = f"{self.preferences_dialog.preferences['font'].family()}, {self.preferences_dialog.preferences['font'].pointSize()}"
 
-            print(f"Text Color: {text_color}")
-            print(f"Background Color: {bg_color}")
-            print(f"Font: {font_str}")
+            self.result_text.setStyleSheet(
+                f"color: {text_color}; background-color: {bg_color};"
+            )
+            self.result_text.setFont(self.preferences_dialog.preferences["font"])
 
     def show_about(self):
         about_dialog = AboutDialog()
