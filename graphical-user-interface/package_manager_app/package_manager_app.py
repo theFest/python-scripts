@@ -1,7 +1,8 @@
 import sys
+import requests
 import subprocess
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPalette, QColor, QFont
+from PyQt5.QtCore import Qt, QByteArray
+from PyQt5.QtGui import QPalette, QColor, QFont, QIcon, QPixmap, QImage
 from PyQt5.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -30,7 +31,7 @@ class PreferencesDialog(QDialog):
         super().__init__()
 
         self.setWindowTitle("Preferences")
-        self.setFixedSize(400, 400)
+        self.setFixedSize(400, 500)
 
         self.preferences = {
             "text_color": QColor(0, 0, 0),
@@ -50,6 +51,10 @@ class PreferencesDialog(QDialog):
     def init_ui(self):
         layout = QVBoxLayout()
 
+        general_label = QLabel("General Preferences")
+        general_label.setFont(QFont("Arial", 14, QFont.Bold))
+        layout.addWidget(general_label)
+
         self.text_color_label = QLabel("Text Color:")
         self.text_color_button = QPushButton("Choose Color")
         self.text_color_button.clicked.connect(self.choose_text_color)
@@ -67,15 +72,15 @@ class PreferencesDialog(QDialog):
         self.theme_combobox.addItems(["Dark", "Light"])
         self.theme_combobox.currentIndexChanged.connect(self.change_theme)
 
-        self.list_text_color_label = QLabel("List Text Color:")
+        self.list_text_color_label = QLabel("Text Color:")
         self.list_text_color_button = QPushButton("Choose Color")
         self.list_text_color_button.clicked.connect(self.choose_list_text_color)
 
-        self.list_bg_color_label = QLabel("List Background Color:")
+        self.list_bg_color_label = QLabel("Background Color:")
         self.list_bg_color_button = QPushButton("Choose Color")
         self.list_bg_color_button.clicked.connect(self.choose_list_bg_color)
 
-        self.list_font_label = QLabel("List Font:")
+        self.list_font_label = QLabel("Font:")
         self.list_font_button = QPushButton("Choose Font")
         self.list_font_button.clicked.connect(self.choose_list_font)
 
@@ -223,7 +228,7 @@ class AboutDialog(QDialog):
 
         layout = QVBoxLayout()
 
-        label = QLabel("Kali Package Manager by theFest - v0.0.4")
+        label = QLabel("Kali Package Manager by theFest - v0.0.5")
         layout.addWidget(label)
 
         self.setLayout(layout)
@@ -238,6 +243,13 @@ class PackageManagerApp(QMainWindow):
     def init_ui(self):
         self.setWindowTitle("Kali Package Manager")
         self.setGeometry(100, 100, 800, 600)
+
+        icon_url = (
+            "https://www.certcop.com/wp-content/uploads/2020/07/1-bash%20icon.png"
+        )
+        icon_data = QByteArray(requests.get(icon_url).content)
+        icon = QIcon(QPixmap.fromImage(QImage.fromData(icon_data)))
+        self.setWindowIcon(icon)
 
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
@@ -263,6 +275,10 @@ class PackageManagerApp(QMainWindow):
         self.update_button.clicked.connect(self.update_package_lists)
         self.updates_button = QPushButton("Available Updates")
         self.updates_button.clicked.connect(self.list_available_updates)
+
+        self.output_label = QLabel("Output:")
+        self.list_output_label = QLabel("List All Packages Output:")
+
         self.result_text = QTextBrowser()
         self.package_list = QListWidget()
 
@@ -278,7 +294,10 @@ class PackageManagerApp(QMainWindow):
         button_layout.addWidget(self.updates_button)
         self.layout.addLayout(button_layout)
 
+        self.layout.addWidget(self.output_label)
         self.layout.addWidget(self.result_text)
+
+        self.layout.addWidget(self.list_output_label)
         self.layout.addWidget(self.package_list)
 
         self.central_widget.setLayout(self.layout)
@@ -348,24 +367,34 @@ class PackageManagerApp(QMainWindow):
         if package_name:
             result = self.run_command(["apt-cache", "show", package_name])
             self.result_text.setPlainText(result)
+            self.status_bar.showMessage(
+                f"Search for package '{package_name}' complete."
+            )
         else:
             self.result_text.setPlainText("Please enter a package name.")
+            self.status_bar.showMessage("Please enter a package name.", 3000)
 
     def install_package(self):
         package_name = self.package_name_input.text()
         if package_name:
             result = self.run_command(["sudo", "apt", "install", package_name])
             self.result_text.setPlainText(result)
+            self.status_bar.showMessage(
+                f"Installing package '{package_name}' complete."
+            )
         else:
             self.result_text.setPlainText("Please enter a package name.")
+            self.status_bar.showMessage("Please enter a package name.", 3000)
 
     def remove_package(self):
         package_name = self.package_name_input.text()
         if package_name:
             result = self.run_command(["sudo", "apt", "remove", package_name])
             self.result_text.setPlainText(result)
+            self.status_bar.showMessage(f"Removing package '{package_name}' complete.")
         else:
             self.result_text.setPlainText("Please enter a package name.")
+            self.status_bar.showMessage("Please enter a package name.", 3000)
 
     def list_all_packages(self):
         result = self.run_command(["apt-cache", "pkgnames"])
@@ -374,14 +403,17 @@ class PackageManagerApp(QMainWindow):
         for package in packages:
             item = QListWidgetItem(package)
             self.package_list.addItem(item)
+        self.status_bar.showMessage("List All Packages complete.")
 
     def update_package_lists(self):
         result = self.run_command(["sudo", "apt", "update"])
         self.result_text.setPlainText(result)
+        self.status_bar.showMessage("Updating package lists complete.")
 
     def list_available_updates(self):
         result = self.run_command(["apt", "list", "--upgradable"])
         self.result_text.setPlainText(result)
+        self.status_bar.showMessage("Listing available updates complete.")
 
     def show_context_menu(self, pos):
         menu = QMenu(self)
@@ -397,8 +429,10 @@ class PackageManagerApp(QMainWindow):
         if package_name:
             result = self.run_command(["apt-cache", "show", package_name])
             self.result_text.setPlainText(result)
+            self.status_bar.showMessage(f"Package Info for '{package_name}' complete.")
         else:
             self.result_text.setPlainText("Please select a package from the list.")
+            self.status_bar.showMessage("Please select a package from the list.", 3000)
 
     def show_preferences(self):
         self.preferences_dialog.exec_()
@@ -408,6 +442,9 @@ class PackageManagerApp(QMainWindow):
         bg_color = self.preferences_dialog.preferences["bg_color"].name()
         font = self.preferences_dialog.preferences["font"]
         theme = self.preferences_dialog.preferences["theme"]
+        list_text_color = self.preferences_dialog.preferences["list_text_color"].name()
+        list_bg_color = self.preferences_dialog.preferences["list_bg_color"].name()
+        list_font = self.preferences_dialog.preferences["list_font"]
 
         if theme == "Light":
             self.set_light_theme()
@@ -419,14 +456,12 @@ class PackageManagerApp(QMainWindow):
         )
         self.result_text.setFont(font)
 
-        list_text_color = self.preferences_dialog.preferences["list_text_color"].name()
-        list_bg_color = self.preferences_dialog.preferences["list_bg_color"].name()
-        list_font = self.preferences_dialog.preferences["list_font"]
-
         self.package_list.setStyleSheet(
             f"color: {list_text_color}; background-color: {list_bg_color};"
         )
         self.package_list.setFont(list_font)
+
+        self.status_bar.showMessage("Preferences applied.")
 
     def show_about(self):
         about_dialog = AboutDialog()
