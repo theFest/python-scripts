@@ -30,13 +30,16 @@ class PreferencesDialog(QDialog):
         super().__init__()
 
         self.setWindowTitle("Preferences")
-        self.setFixedSize(400, 300)
+        self.setFixedSize(400, 400)
 
         self.preferences = {
             "text_color": QColor(0, 0, 0),
             "bg_color": QColor(255, 255, 255),
             "font": QFont(),
             "theme": "Dark",
+            "list_text_color": QColor(0, 0, 0),
+            "list_bg_color": QColor(255, 255, 255),
+            "list_font": QFont(),
         }
 
         self.init_ui()
@@ -64,6 +67,18 @@ class PreferencesDialog(QDialog):
         self.theme_combobox.addItems(["Dark", "Light"])
         self.theme_combobox.currentIndexChanged.connect(self.change_theme)
 
+        self.list_text_color_label = QLabel("List Text Color:")
+        self.list_text_color_button = QPushButton("Choose Color")
+        self.list_text_color_button.clicked.connect(self.choose_list_text_color)
+
+        self.list_bg_color_label = QLabel("List Background Color:")
+        self.list_bg_color_button = QPushButton("Choose Color")
+        self.list_bg_color_button.clicked.connect(self.choose_list_bg_color)
+
+        self.list_font_label = QLabel("List Font:")
+        self.list_font_button = QPushButton("Choose Font")
+        self.list_font_button.clicked.connect(self.choose_list_font)
+
         reset_button = QPushButton("Reset to Defaults")
         reset_button.clicked.connect(self.reset_preferences)
 
@@ -78,6 +93,14 @@ class PreferencesDialog(QDialog):
         layout.addWidget(self.font_button)
         layout.addWidget(self.theme_label)
         layout.addWidget(self.theme_combobox)
+
+        layout.addWidget(self.list_text_color_label)
+        layout.addWidget(self.list_text_color_button)
+        layout.addWidget(self.list_bg_color_label)
+        layout.addWidget(self.list_bg_color_button)
+        layout.addWidget(self.list_font_label)
+        layout.addWidget(self.list_font_button)
+
         layout.addWidget(reset_button)
         layout.addWidget(save_button)
 
@@ -94,6 +117,16 @@ class PreferencesDialog(QDialog):
             f"{self.preferences['font'].family()}, {self.preferences['font'].pointSize()}"
         )
         self.theme_combobox.setCurrentText(self.preferences["theme"])
+
+        self.list_text_color_button.setStyleSheet(
+            f"background-color: {self.preferences['list_text_color'].name()}"
+        )
+        self.list_bg_color_button.setStyleSheet(
+            f"background-color: {self.preferences['list_bg_color'].name()}"
+        )
+        self.list_font_button.setText(
+            f"{self.preferences['list_font'].family()}, {self.preferences['list_font'].pointSize()}"
+        )
 
     def choose_text_color(self):
         color_dialog = QColorDialog(self)
@@ -125,12 +158,39 @@ class PreferencesDialog(QDialog):
             self.preferences["theme"] = selected_theme
             self.update_ui_from_preferences()
 
+    def choose_list_text_color(self):
+        color_dialog = QColorDialog(self)
+        color_dialog.setOption(QColorDialog.ShowAlphaChannel)
+        color = color_dialog.getColor(self.preferences["list_text_color"])
+        if color.isValid():
+            self.preferences["list_text_color"] = color
+            self.update_ui_from_preferences()
+
+    def choose_list_bg_color(self):
+        color_dialog = QColorDialog(self)
+        color_dialog.setOption(QColorDialog.ShowAlphaChannel)
+        color = color_dialog.getColor(self.preferences["list_bg_color"])
+        if color.isValid():
+            self.preferences["list_bg_color"] = color
+            self.update_ui_from_preferences()
+
+    def choose_list_font(self):
+        font_dialog = QFontDialog(self)
+        font_dialog.setCurrentFont(self.preferences["list_font"])
+        font, ok = font_dialog.getFont()
+        if ok:
+            self.preferences["list_font"] = font
+            self.update_ui_from_preferences()
+
     def reset_preferences(self):
         self.preferences = {
             "text_color": QColor(0, 0, 0),
             "bg_color": QColor(255, 255, 255),
             "font": QFont(),
             "theme": "Dark",
+            "list_text_color": QColor(0, 0, 0),
+            "list_bg_color": QColor(255, 255, 255),
+            "list_font": QFont(),
         }
         self.update_ui_from_preferences()
 
@@ -139,11 +199,17 @@ class PreferencesDialog(QDialog):
         bg_color = self.preferences["bg_color"].name()
         font_str = f"{self.preferences['font'].family()}, {self.preferences['font'].pointSize()}"
         theme = self.preferences["theme"]
+        list_text_color = self.preferences["list_text_color"].name()
+        list_bg_color = self.preferences["list_bg_color"].name()
+        list_font_str = f"{self.preferences['list_font'].family()}, {self.preferences['list_font'].pointSize()}"
 
         print(f"Text Color: {text_color}")
         print(f"Background Color: {bg_color}")
         print(f"Font: {font_str}")
         print(f"Theme: {theme}")
+        print(f"List Text Color: {list_text_color}")
+        print(f"List Background Color: {list_bg_color}")
+        print(f"List Font: {list_font_str}")
 
         self.accept()
 
@@ -157,7 +223,7 @@ class AboutDialog(QDialog):
 
         layout = QVBoxLayout()
 
-        label = QLabel("Kali Package Manager by theFest - v0.0.3")
+        label = QLabel("Kali Package Manager by theFest - v0.0.4")
         layout.addWidget(label)
 
         self.setLayout(layout)
@@ -335,22 +401,7 @@ class PackageManagerApp(QMainWindow):
             self.result_text.setPlainText("Please select a package from the list.")
 
     def show_preferences(self):
-        result = self.preferences_dialog.exec_()
-        if result == QDialog.Accepted:
-            text_color = self.preferences_dialog.preferences["text_color"].name()
-            bg_color = self.preferences_dialog.preferences["bg_color"].name()
-            font_str = f"{self.preferences_dialog.preferences['font'].family()}, {self.preferences_dialog.preferences['font'].pointSize()}"
-            theme = self.preferences_dialog.preferences["theme"]
-
-            if theme == "Light":
-                self.set_light_theme()
-            else:
-                self.set_dark_theme()
-
-            self.result_text.setStyleSheet(
-                f"color: {text_color}; background-color: {bg_color};"
-            )
-            self.result_text.setFont(self.preferences_dialog.preferences["font"])
+        self.preferences_dialog.exec_()
 
     def apply_preferences(self):
         text_color = self.preferences_dialog.preferences["text_color"].name()
@@ -367,6 +418,15 @@ class PackageManagerApp(QMainWindow):
             f"color: {text_color}; background-color: {bg_color};"
         )
         self.result_text.setFont(font)
+
+        list_text_color = self.preferences_dialog.preferences["list_text_color"].name()
+        list_bg_color = self.preferences_dialog.preferences["list_bg_color"].name()
+        list_font = self.preferences_dialog.preferences["list_font"]
+
+        self.package_list.setStyleSheet(
+            f"color: {list_text_color}; background-color: {list_bg_color};"
+        )
+        self.package_list.setFont(list_font)
 
     def show_about(self):
         about_dialog = AboutDialog()
