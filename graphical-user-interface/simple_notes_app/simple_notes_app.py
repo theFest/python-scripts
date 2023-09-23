@@ -24,7 +24,17 @@ from PyQt5.QtWidgets import (
     QInputDialog,
     QDesktopWidget,
 )
-from PyQt5.QtGui import QTextCharFormat, QTextImageFormat, QTextCursor
+from PyQt5.QtGui import (
+    QFont,
+    QTextCursor,
+    QTextCharFormat,
+    QTextTableFormat,
+    QTextImageFormat,
+    QTextListFormat,
+    QTextDocument,
+    QAbstractTextDocumentLayout,
+    QKeySequence,
+)
 from PyQt5.QtCore import Qt
 
 
@@ -34,6 +44,22 @@ class NoteApp(QMainWindow):
 
         self.init_ui()
         self.init_database()
+
+        self.status_messages = {
+            "saved": "Note saved successfully.",
+            "loaded": "Note loaded.",
+            "cleared": "Note cleared.",
+            "image_inserted": "Image inserted.",
+            "table_inserted": "Table inserted.",
+            "list_inserted": "List inserted.",
+            "font_size": "Font size changed.",
+            "font_changed": "Font changed.",
+            "bolded": "Text is set to Bold.",
+            "italic": "Text is set to Italic.",
+            "underline": "Text is set to Underline.",
+            "spell_check": "Spell check is turned ON.",
+            "font_color_changed": "Font color changed.",
+        }
 
     def init_ui(self):
         central_widget = QWidget(self)
@@ -115,6 +141,9 @@ class NoteApp(QMainWindow):
         insert_table_action = self.create_action(
             "Insert Table", self.insert_table, "Ctrl+T"
         )
+        insert_list_action = self.create_action(
+            "Insert List", self.insert_list, "Ctrl+L"
+        )
 
         edit_menu.addAction(undo_action)
         edit_menu.addAction(redo_action)
@@ -133,16 +162,21 @@ class NoteApp(QMainWindow):
         view_menu.addAction(view_html_action)
         view_menu.addAction(insert_image_action)
         view_menu.addAction(insert_table_action)
+        view_menu.addAction(insert_list_action)
 
-        dark_theme_action = self.create_action(
-            "Dark Theme", self.toggle_dark_theme, "Ctrl+D"
-        )
-        view_menu.addAction(dark_theme_action)
+        view_menu.addSeparator()
 
         font_action = self.create_action("Font", self.choose_font)
         font_color_action = self.create_action("Font Color", self.choose_font_color)
         view_menu.addAction(font_action)
         view_menu.addAction(font_color_action)
+        
+        view_menu.addSeparator()
+
+        dark_theme_action = self.create_action(
+            "Dark Theme", self.toggle_dark_theme, "Ctrl+D"
+        )
+        view_menu.addAction(dark_theme_action)
 
         help_action = self.create_action("Help", self.show_help_dialog, "F1")
         help_menu.addAction(help_action)
@@ -195,38 +229,37 @@ class NoteApp(QMainWindow):
             QFont.Bold if self.text_edit.fontWeight() != QFont.Bold else QFont.Normal
         )
         self.text_edit.mergeCurrentCharFormat(char_format)
+        self.set_status_message("bolded")
 
     def toggle_italic(self):
         char_format = QTextCharFormat()
         char_format.setFontItalic(not self.text_edit.fontItalic())
         self.text_edit.mergeCurrentCharFormat(char_format)
+        self.set_status_message("italic")
 
     def toggle_underline(self):
         char_format = QTextCharFormat()
         char_format.setFontUnderline(not self.text_edit.fontUnderline())
         self.text_edit.mergeCurrentCharFormat(char_format)
+        self.set_status_message("underline")
 
     def toggle_spell_check(self):
         self.text_edit.setAcceptRichText(not self.text_edit.acceptRichText())
+        self.set_status_message("spell_check")
 
     def choose_font(self):
         font, ok = QFontDialog.getFont()
         if ok:
             self.text_edit.setCurrentFont(font)
+            self.set_status_message("font_changed")
 
     def choose_font_size(self):
-        size, ok = QInputDialog.getInt(
-            self,
-            "Font Size",
-            "Enter font size:",
-            self.text_edit.fontPointSize(),
-            1,
-            100,
-        )
+        size, ok = QInputDialog.getInt(self, "Font Size", "Enter font size:")
         if ok:
-            char_format = QTextCharFormat()
-            char_format.setFontPointSize(size)
-            self.text_edit.mergeCurrentCharFormat(char_format)
+            font = self.text_edit.currentFont()
+            font.setPointSize(size)
+            self.text_edit.setCurrentFont(font)
+            self.set_status_message("font_size")
 
     def choose_font_color(self):
         color = QColorDialog.getColor(self.text_edit.textColor(), self)
@@ -234,6 +267,7 @@ class NoteApp(QMainWindow):
             char_format = QTextCharFormat()
             char_format.setForeground(color)
             self.text_edit.mergeCurrentCharFormat(char_format)
+            self.set_status_message("font_color_changed")
 
     def update_word_count(self):
         text = self.text_edit.toPlainText()
@@ -252,6 +286,8 @@ class NoteApp(QMainWindow):
         self.update_word_count()
         self.current_note_label.clear()
 
+        self.set_status_message("cleared")
+
     def open_note(self):
         if self.text_edit.toPlainText() and not self.ask_to_save():
             return
@@ -268,6 +304,8 @@ class NoteApp(QMainWindow):
                 self.current_note_label.setText(f"Current Note: {file_name}")
                 self.current_file = file_name
 
+                self.set_status_message("loaded")
+
     def save_note(self):
         if not self.text_edit.toPlainText():
             return
@@ -278,6 +316,7 @@ class NoteApp(QMainWindow):
                 file.write(self.text_edit.toPlainText())
                 self.update_word_count()
                 self.current_note_label.setText(f"Current Note: {file_name}")
+                self.set_status_message("saved")
         else:
             self.save_note_as()
 
@@ -298,6 +337,7 @@ class NoteApp(QMainWindow):
                 self.update_word_count()
                 self.current_note_label.setText(f"Current Note: {file_name}")
                 self.current_file = file_name
+                self.set_status_message("saved")
 
     def ask_to_save(self):
         reply = QMessageBox.question(
@@ -357,6 +397,8 @@ class NoteApp(QMainWindow):
             image_format.setHeight(200)
             cursor.insertImage(image_format)
 
+            self.set_status_message("image_inserted")
+
     def insert_table(self):
         table_dialog = TableDialog(self)
         if table_dialog.exec_():
@@ -368,6 +410,22 @@ class NoteApp(QMainWindow):
             table_format.setCellSpacing(0)
             table_format.setAlignment(Qt.AlignLeft)
             cursor.insertTable(rows, cols, table_format)
+
+            self.set_status_message("table_inserted")
+
+    def insert_list(self):
+        list_dialog = ListDialog(self)
+        if list_dialog.exec_():
+            cursor = self.text_edit.textCursor()
+            list_format = QTextListFormat()
+            list_format.setStyle(QTextListFormat.ListDisc)
+            cursor.insertList(list_format)
+
+            self.set_status_message("List inserted")
+
+    def set_status_message(self, message_key):
+        if message_key in self.status_messages:
+            self.status_bar.showMessage(self.status_messages[message_key], 5000)
 
     def toggle_dark_theme(self):
         app_style = """
@@ -437,7 +495,7 @@ class NoteApp(QMainWindow):
         help_text = """
         Simple FW Notes
         
-        This is a simple note-taking application with basic formatting options.
+        This is a simple note-taking app by theFest - v0.0.5
 
         File Menu:
         - New (Ctrl+N): Create a new note.
@@ -586,6 +644,21 @@ class ReplaceDialog(QDialog):
         cursor.setPosition(text_widget.document().find(item.text()).position())
         text_widget.setTextCursor(cursor)
         self.accept()
+
+
+class ListDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Insert List")
+        self.setGeometry(100, 100, 200, 100)
+
+        layout = QVBoxLayout()
+
+        insert_button = QPushButton("Insert List")
+        insert_button.clicked.connect(self.accept)
+        layout.addWidget(insert_button)
+
+        self.setLayout(layout)
 
 
 class TableDialog(QDialog):
