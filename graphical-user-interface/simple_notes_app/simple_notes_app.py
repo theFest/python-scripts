@@ -59,6 +59,12 @@ class NoteApp(QMainWindow):
             "underline": "Text is set to Underline.",
             "spell_check": "Spell check is turned ON.",
             "font_color_changed": "Font color changed.",
+            "text_highlighted": "Text highlighted.",
+            "text_aligned_left": "Text aligned left.",
+            "text_aligned_center": "Text aligned center.",
+            "text_aligned_right": "Text aligned right.",
+            "text_indent_increased": "Text indentation increased.",
+            "text_indent_decreased": "Text indentation decreased.",
         }
 
     def init_ui(self):
@@ -145,6 +151,38 @@ class NoteApp(QMainWindow):
             "Insert List", self.insert_list, "Ctrl+L"
         )
 
+        text_format_menu = view_menu.addMenu("Text Format")
+
+        highlight_action = self.create_action(
+            "Highlight", self.toggle_highlight, "Ctrl+H"
+        )
+        text_format_menu.addAction(highlight_action)
+
+        align_left_action = self.create_action(
+            "Align Left", self.align_text_left, "Ctrl+Shift+L"
+        )
+        text_format_menu.addAction(align_left_action)
+
+        align_center_action = self.create_action(
+            "Align Center", self.align_text_center, "Ctrl+Shift+C"
+        )
+        text_format_menu.addAction(align_center_action)
+
+        align_right_action = self.create_action(
+            "Align Right", self.align_text_right, "Ctrl+Shift+R"
+        )
+        text_format_menu.addAction(align_right_action)
+
+        increase_indent_action = self.create_action(
+            "Increase Indent", self.increase_text_indent, "Ctrl+]"
+        )
+        text_format_menu.addAction(increase_indent_action)
+
+        decrease_indent_action = self.create_action(
+            "Decrease Indent", self.decrease_text_indent, "Ctrl+["
+        )
+        text_format_menu.addAction(decrease_indent_action)
+
         edit_menu.addAction(undo_action)
         edit_menu.addAction(redo_action)
         edit_menu.addSeparator()
@@ -170,7 +208,7 @@ class NoteApp(QMainWindow):
         font_color_action = self.create_action("Font Color", self.choose_font_color)
         view_menu.addAction(font_action)
         view_menu.addAction(font_color_action)
-        
+
         view_menu.addSeparator()
 
         dark_theme_action = self.create_action(
@@ -423,6 +461,70 @@ class NoteApp(QMainWindow):
 
             self.set_status_message("List inserted")
 
+    def toggle_highlight(self):
+        char_format = QTextCharFormat()
+        char_format.setBackground(
+            Qt.yellow
+            if self.text_edit.currentCharFormat().background().color() != Qt.yellow
+            else Qt.white
+        )
+        self.text_edit.mergeCurrentCharFormat(char_format)
+        self.set_status_message("text_highlighted")
+
+    def align_text_left(self):
+        cursor = self.text_edit.textCursor()
+        block_format = cursor.blockFormat()
+        block_format.setAlignment(Qt.AlignLeft)
+        cursor.mergeBlockFormat(block_format)
+        self.set_status_message("text_aligned_left")
+
+    def align_text_center(self):
+        cursor = self.text_edit.textCursor()
+        block_format = cursor.blockFormat()
+        block_format.setAlignment(Qt.AlignCenter)
+        cursor.mergeBlockFormat(block_format)
+        self.set_status_message("text_aligned_center")
+
+    def align_text_right(self):
+        cursor = self.text_edit.textCursor()
+        block_format = cursor.blockFormat()
+        block_format.setAlignment(Qt.AlignRight)
+        cursor.mergeBlockFormat(block_format)
+        self.set_status_message("text_aligned_right")
+
+    def increase_text_indent(self):
+        cursor = self.text_edit.textCursor()
+        cursor.movePosition(QTextCursor.StartOfBlock)
+        cursor.insertText("\t")
+        self.set_status_message("text_indent_increased")
+
+    def decrease_text_indent(self):
+        cursor = self.text_edit.textCursor()
+        cursor.movePosition(QTextCursor.StartOfBlock)
+        cursor.insertText(" " * 4)
+        self.set_status_message("text_indent_decreased")
+
+    def print_note(self):
+        printer = QPrinter()
+        dialog = QPrintDialog(printer, self)
+        if dialog.exec_() == QPrintDialog.Accepted:
+            self.text_edit.print_(printer)
+
+    def export_to_pdf(self):
+        options = QFileDialog.Options()
+        file_name, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export to PDF",
+            "",
+            "PDF Files (*.pdf);;All Files (*)",
+            options=options,
+        )
+        if file_name:
+            printer = QPrinter()
+            printer.setOutputFormat(QPrinter.PdfFormat)
+            printer.setOutputFileName(file_name)
+            self.text_edit.document().print_(printer)
+
     def set_status_message(self, message_key):
         if message_key in self.status_messages:
             self.status_bar.showMessage(self.status_messages[message_key], 5000)
@@ -495,7 +597,7 @@ class NoteApp(QMainWindow):
         help_text = """
         Simple FW Notes
         
-        This is a simple note-taking app by theFest - v0.0.5
+        This is a simple note-taking app by theFest - v0.0.6
 
         File Menu:
         - New (Ctrl+N): Create a new note.
