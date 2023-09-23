@@ -22,6 +22,7 @@ from PyQt5.QtWidgets import (
     QLineEdit,
     QPushButton,
     QInputDialog,
+    QDesktopWidget,
 )
 from PyQt5.QtGui import QTextCharFormat, QTextImageFormat, QTextCursor
 from PyQt5.QtCore import Qt
@@ -55,6 +56,8 @@ class NoteApp(QMainWindow):
 
         self.setWindowTitle("Simple FW Notes")
         self.setGeometry(100, 100, 800, 600)
+
+        self.center()
 
         self.current_file = None
 
@@ -143,6 +146,12 @@ class NoteApp(QMainWindow):
 
         help_action = self.create_action("Help", self.show_help_dialog, "F1")
         help_menu.addAction(help_action)
+
+    def center(self):
+        screen_geometry = QDesktopWidget().screenGeometry()
+        x = (screen_geometry.width() - self.width()) // 2
+        y = (screen_geometry.height() - self.height()) // 2
+        self.move(x, y)
 
     def create_toolbar(self):
         formatting_toolbar = QToolBar("Formatting Toolbar")
