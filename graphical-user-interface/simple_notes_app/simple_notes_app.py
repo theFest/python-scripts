@@ -3,23 +3,28 @@ import sqlite3
 from PyQt5.QtWidgets import (
     QApplication,
     QMainWindow,
-    QTextEdit,
-    QAction,
-    qApp,
-    QVBoxLayout,
-    QWidget,
-    QFileDialog,
     QMenuBar,
     QMenu,
     QToolBar,
-    QListWidget,
-    QListWidgetItem,
-    QDialog,
+    QAction,
+    QTextEdit,
+    QVBoxLayout,
     QLineEdit,
     QPushButton,
+    QDialog,
+    QListWidget,
+    QListWidgetItem,
+    QFileDialog,
     QLabel,
+    QMessageBox,
+    QFontDialog,
+    QColorDialog,
+    QPlainTextEdit,
+    QInputDialog,
+    QWidget,
 )
-from PyQt5.QtGui import QTextCursor
+from PyQt5.QtGui import QTextCursor, QTextCharFormat, QTextTableFormat
+from PyQt5.QtCore import Qt
 
 
 class NoteApp(QMainWindow):
@@ -48,7 +53,7 @@ class NoteApp(QMainWindow):
 
         self.setCentralWidget(central_widget)
 
-        self.setWindowTitle("Simple Notes")
+        self.setWindowTitle("Simple FW Notes")
         self.setGeometry(100, 100, 800, 600)
 
         self.current_file = None
@@ -65,6 +70,7 @@ class NoteApp(QMainWindow):
         menubar = self.menuBar()
         file_menu = menubar.addMenu("File")
         edit_menu = menubar.addMenu("Edit")
+        view_menu = menubar.addMenu("View")
 
         new_action = self.create_action("New", self.new_note, "Ctrl+N")
         open_action = self.create_action("Open", self.open_note, "Ctrl+O")
@@ -72,7 +78,7 @@ class NoteApp(QMainWindow):
         save_as_action = self.create_action(
             "Save As...", self.save_note_as, "Ctrl+Shift+S"
         )
-        exit_action = self.create_action("Exit", qApp.quit, "Ctrl+Q")
+        exit_action = self.create_action("Exit", QApplication.quit, "Ctrl+Q")
 
         file_menu.addAction(new_action)
         file_menu.addAction(open_action)
@@ -93,6 +99,18 @@ class NoteApp(QMainWindow):
         replace_action = self.create_action(
             "Replace", self.show_replace_dialog, "Ctrl+H"
         )
+        spell_check_action = self.create_action(
+            "Spell Check", self.toggle_spell_check, "Ctrl+G"
+        )
+        view_html_action = self.create_action(
+            "View HTML Source", self.view_html_source, "Ctrl+U"
+        )
+        insert_image_action = self.create_action(
+            "Insert Image", self.insert_image, "Ctrl+I"
+        )
+        insert_table_action = self.create_action(
+            "Insert Table", self.insert_table, "Ctrl+T"
+        )
 
         edit_menu.addAction(undo_action)
         edit_menu.addAction(redo_action)
@@ -105,6 +123,22 @@ class NoteApp(QMainWindow):
         edit_menu.addSeparator()
         edit_menu.addAction(find_action)
         edit_menu.addAction(replace_action)
+        edit_menu.addSeparator()
+        edit_menu.addAction(spell_check_action)
+
+        view_menu.addAction(view_html_action)
+        view_menu.addAction(insert_image_action)
+        view_menu.addAction(insert_table_action)
+
+        dark_theme_action = self.create_action(
+            "Dark Theme", self.toggle_dark_theme, "Ctrl+D"
+        )
+        view_menu.addAction(dark_theme_action)
+
+        font_action = self.create_action("Font", self.choose_font)
+        font_color_action = self.create_action("Font Color", self.choose_font_color)
+        view_menu.addAction(font_action)
+        view_menu.addAction(font_color_action)
 
     def create_toolbar(self):
         toolbar = QToolBar("Formatting Toolbar")
@@ -115,10 +149,14 @@ class NoteApp(QMainWindow):
         underline_action = self.create_action(
             "Underline", self.toggle_underline, "Ctrl+U"
         )
+        font_size_action = self.create_action("Font Size", self.choose_font_size)
+        font_color_action = self.create_action("Font Color", self.choose_font_color)
 
         toolbar.addAction(bold_action)
         toolbar.addAction(italic_action)
         toolbar.addAction(underline_action)
+        toolbar.addAction(font_size_action)
+        toolbar.addAction(font_color_action)
 
         find_replace_toolbar = QToolBar("Find and Replace")
         self.addToolBar(find_replace_toolbar)
@@ -139,13 +177,47 @@ class NoteApp(QMainWindow):
         return action
 
     def toggle_bold(self):
-        self.text_edit.setFontWeight(QTextCursor.Bold)
+        char_format = QTextCharFormat()
+        char_format.setFontWeight(
+            QFont.Bold if self.text_edit.fontWeight() != QFont.Bold else QFont.Normal
+        )
+        self.text_edit.mergeCurrentCharFormat(char_format)
 
     def toggle_italic(self):
-        self.text_edit.setFontItalic(not self.text_edit.fontItalic())
+        char_format = QTextCharFormat()
+        char_format.setFontItalic(not self.text_edit.fontItalic())
+        self.text_edit.mergeCurrentCharFormat(char_format)
 
     def toggle_underline(self):
-        self.text_edit.setFontUnderline(not self.text_edit.fontUnderline())
+        char_format = QTextCharFormat()
+        char_format.setFontUnderline(not self.text_edit.fontUnderline())
+        self.text_edit.mergeCurrentCharFormat(char_format)
+
+    def choose_font(self):
+        font, ok = QFontDialog.getFont()
+        if ok:
+            self.text_edit.setCurrentFont(font)
+
+    def choose_font_size(self):
+        size, ok = QInputDialog.getInt(
+            self,
+            "Font Size",
+            "Enter font size:",
+            self.text_edit.fontPointSize(),
+            1,
+            100,
+        )
+        if ok:
+            char_format = QTextCharFormat()
+            char_format.setFontPointSize(size)
+            self.text_edit.mergeCurrentCharFormat(char_format)
+
+    def choose_font_color(self):
+        color = QColorDialog.getColor(self.text_edit.textColor(), self)
+        if color.isValid():
+            char_format = QTextCharFormat()
+            char_format.setForeground(color)
+            self.text_edit.mergeCurrentCharFormat(char_format)
 
     def update_word_count(self):
         text = self.text_edit.toPlainText()
@@ -156,12 +228,18 @@ class NoteApp(QMainWindow):
         self.update_word_count()
 
     def new_note(self):
+        if self.text_edit.toPlainText() and not self.ask_to_save():
+            return
+
         self.text_edit.clear()
         self.current_file = None
         self.update_word_count()
         self.current_note_label.clear()
 
     def open_note(self):
+        if self.text_edit.toPlainText() and not self.ask_to_save():
+            return
+
         options = QFileDialog.Options()
         options |= QFileDialog.ReadOnly
         file_name, _ = QFileDialog.getOpenFileName(
@@ -205,6 +283,24 @@ class NoteApp(QMainWindow):
                 self.current_note_label.setText(f"Current Note: {file_name}")
                 self.current_file = file_name
 
+    def ask_to_save(self):
+        reply = QMessageBox.question(
+            self,
+            "Save Changes?",
+            "Do you want to save changes to the current note?",
+            QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
+            QMessageBox.Save,
+        )
+
+        if reply == QMessageBox.Save:
+            self.save_note()
+            return True
+        elif reply == QMessageBox.Discard:
+            return True
+        elif reply == QMessageBox.Cancel:
+            return False
+        return True
+
     def show_find_dialog(self):
         find_dialog = FindDialog(self)
         find_dialog.exec_()
@@ -213,92 +309,253 @@ class NoteApp(QMainWindow):
         replace_dialog = ReplaceDialog(self)
         replace_dialog.exec_()
 
-    def save_to_database(self):
-        content = self.text_edit.toPlainText()
-        self.cursor.execute("INSERT INTO notes (content) VALUES (?)", (content,))
-        self.connection.commit()
-        self.current_note_label.setText("Current Note: Saved to Database")
+    def toggle_spell_check(self):
+        self.text_edit.setCheckSpelling(not self.text_edit.checkSpelling())
 
-    def load_from_database(self, note_id):
-        self.cursor.execute("SELECT content FROM notes WHERE id = ?", (note_id,))
-        note_content = self.cursor.fetchone()
-        if note_content:
-            self.text_edit.setPlainText(note_content[0])
-            self.update_word_count()
-            self.current_note_label.setText(f"Current Note: ID {note_id}")
+    def view_html_source(self):
+        html_source = self.text_edit.toHtml()
+        source_dialog = QPlainTextEdit()
+        source_dialog.setPlainText(html_source)
+        source_dialog.setWindowTitle("HTML Source")
+        source_dialog.setGeometry(100, 100, 800, 600)
+        source_dialog.exec_()
 
-    def show_notes_list(self):
-        notes_list = NotesListDialog(self.connection, self.load_from_database)
-        notes_list.exec_()
+    def insert_image(self):
+        options = QFileDialog.Options()
+        file_name, _ = QFileDialog.getOpenFileName(
+            self,
+            "Insert Image",
+            "",
+            "Image Files (*.png *.jpg *.jpeg *.gif *.bmp)",
+            options=options,
+        )
+        if file_name:
+            cursor = self.text_edit.textCursor()
+            image_format = QTextImageFormat()
+            image_format.setName(file_name)
+            image_format.setWidth(300)
+            image_format.setHeight(200)
+            cursor.insertImage(image_format)
 
-    def closeEvent(self, event):
-        self.connection.close()
-        event.accept()
+    def insert_table(self):
+        table_dialog = TableDialog(self)
+        if table_dialog.exec_():
+            rows = table_dialog.get_rows()
+            cols = table_dialog.get_columns()
+            cursor = self.text_edit.textCursor()
+            table_format = QTextTableFormat()
+            table_format.setCellPadding(4)
+            table_format.setCellSpacing(0)
+            table_format.setAlignment(Qt.AlignLeft)
+            cursor.insertTable(rows, cols, table_format)
+
+    def toggle_dark_theme(self):
+        app_style = """
+            QMainWindow {
+                background-color: #1e1e1e;
+                color: #f0f0f0;
+            }
+            QMenuBar {
+                background-color: #1e1e1e;
+                color: #f0f0f0;
+            }
+            QMenuBar::item {
+                background-color: #1e1e1e;
+                color: #f0f0f0;
+                padding: 4px 8px;
+                border-radius: 4px;
+            }
+            QMenuBar::item:selected {
+                background-color: #474747;
+            }
+            QMenu {
+                background-color: #1e1e1e;
+                color: #f0f0f0;
+                border: 1px solid #474747;
+            }
+            QMenu::item {
+                background-color: transparent;
+                padding: 6px 20px;
+                border-radius: 4px;
+            }
+            QMenu::item:selected {
+                background-color: #474747;
+            }
+            QToolBar {
+                background-color: #1e1e1e;
+                border: none;
+                spacing: 10px;
+            }
+            QPushButton {
+                background-color: #474747;
+                color: #f0f0f0;
+                border: 1px solid #474747;
+                padding: 6px 20px;
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background-color: #333333;
+            }
+            QLineEdit {
+                background-color: #333333;
+                color: #f0f0f0;
+                padding: 6px 10px;
+                border: 1px solid #474747;
+                border-radius: 4px;
+            }
+            QTextEdit {
+                background-color: #333333;
+                color: #f0f0f0;
+                border: 1px solid #474747;
+                border-radius: 4px;
+                padding: 6px;
+            }
+        """
+        self.setStyleSheet(app_style)
 
 
 class FindDialog(QDialog):
-    def __init__(self, parent):
+    def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Find")
-        self.setGeometry(300, 300, 300, 100)
+        self.setGeometry(100, 100, 400, 100)
+
         layout = QVBoxLayout()
 
-        self.find_text_edit = QLineEdit()
+        self.find_input = QLineEdit()
+        self.find_input.setPlaceholderText("Find text...")
+        layout.addWidget(self.find_input)
+
         find_button = QPushButton("Find")
         find_button.clicked.connect(self.find_text)
-
-        layout.addWidget(self.find_text_edit)
         layout.addWidget(find_button)
+
+        self.results_list = QListWidget()
+        self.results_list.itemDoubleClicked.connect(self.go_to_result)
+        layout.addWidget(self.results_list)
 
         self.setLayout(layout)
 
     def find_text(self):
-        text_to_find = self.find_text_edit.text()
-        text = self.parent().text_edit.toPlainText()
-        cursor = self.parent().text_edit.textCursor()
-        found_cursor = cursor.document().find(text_to_find, cursor)
-        if found_cursor.hasSelection():
-            self.parent().text_edit.setTextCursor(found_cursor)
+        text_to_find = self.find_input.text()
+        if not text_to_find:
+            return
+
+        text_widget = self.parent().text_edit
+        cursor = text_widget.document().find(text_to_find)
+        self.results_list.clear()
+        while cursor.isValid():
+            result = cursor.block().text()
+            item = QListWidgetItem(result)
+            self.results_list.addItem(item)
+            cursor = text_widget.document().find(text_to_find, cursor)
+
+    def go_to_result(self, item):
+        text_widget = self.parent().text_edit
+        cursor = text_widget.textCursor()
+        cursor.setPosition(text_widget.document().find(item.text()).position())
+        text_widget.setTextCursor(cursor)
+        self.accept()
 
 
 class ReplaceDialog(QDialog):
-    def __init__(self, parent):
+    def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Replace")
-        self.setGeometry(300, 300, 300, 150)
+        self.setGeometry(100, 100, 400, 150)
+
         layout = QVBoxLayout()
 
-        self.find_text_edit = QLineEdit()
-        self.replace_text_edit = QLineEdit()
+        self.find_input = QLineEdit()
+        self.find_input.setPlaceholderText("Find text...")
+        layout.addWidget(self.find_input)
+
+        self.replace_input = QLineEdit()
+        self.replace_input.setPlaceholderText("Replace with...")
+        layout.addWidget(self.replace_input)
+
+        find_button = QPushButton("Find")
+        find_button.clicked.connect(self.find_text)
+        layout.addWidget(find_button)
+
         replace_button = QPushButton("Replace")
         replace_button.clicked.connect(self.replace_text)
-
-        layout.addWidget(self.find_text_edit)
-        layout.addWidget(self.replace_text_edit)
         layout.addWidget(replace_button)
+
+        self.results_list = QListWidget()
+        self.results_list.itemDoubleClicked.connect(self.go_to_result)
+        layout.addWidget(self.results_list)
 
         self.setLayout(layout)
 
+    def find_text(self):
+        text_to_find = self.find_input.text()
+        if not text_to_find:
+            return
+
+        text_widget = self.parent().text_edit
+        cursor = text_widget.document().find(text_to_find)
+        self.results_list.clear()
+        while cursor.isValid():
+            result = cursor.block().text()
+            item = QListWidgetItem(result)
+            self.results_list.addItem(item)
+            cursor = text_widget.document().find(text_to_find, cursor)
+
     def replace_text(self):
-        text_to_find = self.find_text_edit.text()
-        text_to_replace = self.replace_text_edit.text()
-        text = self.parent().text_edit.toPlainText()
-        text = text.replace(text_to_find, text_to_replace)
-        self.parent().text_edit.setPlainText(text)
+        text_to_find = self.find_input.text()
+        text_to_replace = self.replace_input.text()
+        if not text_to_find:
+            return
+
+        text_widget = self.parent().text_edit
+        cursor = text_widget.textCursor()
+        cursor.beginEditBlock()
+        while cursor.selectedText() == text_to_find:
+            cursor.insertText(text_to_replace)
+        cursor.endEditBlock()
+        self.find_text()
+
+    def go_to_result(self, item):
+        text_widget = self.parent().text_edit
+        cursor = text_widget.textCursor()
+        cursor.setPosition(text_widget.document().find(item.text()).position())
+        text_widget.setTextCursor(cursor)
+        self.accept()
+
+
+class TableDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Insert Table")
+        self.setGeometry(100, 100, 300, 100)
+
+        layout = QVBoxLayout()
+
+        self.rows_input = QLineEdit()
+        self.rows_input.setPlaceholderText("Rows")
+        layout.addWidget(self.rows_input)
+
+        self.columns_input = QLineEdit()
+        self.columns_input.setPlaceholderText("Columns")
+        layout.addWidget(self.columns_input)
+
+        insert_button = QPushButton("Insert")
+        insert_button.clicked.connect(self.accept)
+        layout.addWidget(insert_button)
+
+        self.setLayout(layout)
+
+    def get_rows(self):
+        return int(self.rows_input.text())
+
+    def get_columns(self):
+        return int(self.columns_input.text())
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    dark_theme = """
-        QMainWindow { background-color: #2E2E2E; color: white; }
-        QTextEdit { background-color: #1E1E1E; color: white; }
-        QMenuBar { background-color: #2E2E2E; color: white; }
-        QMenu { background-color: #2E2E2E; color: white; }
-        QMenu::item:selected { background-color: #3E3E3E; }
-        QMenuBar::item:selected { background-color: #3E3E3E; }
-    """
-    app.setStyleSheet(dark_theme)
-
-    main_win = NoteApp()
-    main_win.show()
+    app.setStyle("Fusion")
+    window = NoteApp()
+    window.show()
     sys.exit(app.exec_())
