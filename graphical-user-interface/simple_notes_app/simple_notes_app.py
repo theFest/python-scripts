@@ -9,21 +9,21 @@ from PyQt5.QtWidgets import (
     QAction,
     QTextEdit,
     QVBoxLayout,
-    QLineEdit,
-    QPushButton,
-    QDialog,
-    QListWidget,
-    QListWidgetItem,
-    QFileDialog,
     QLabel,
     QMessageBox,
     QFontDialog,
     QColorDialog,
     QPlainTextEdit,
-    QInputDialog,
     QWidget,
+    QFileDialog,
+    QDialog,
+    QListWidget,
+    QListWidgetItem,
+    QLineEdit,
+    QPushButton,
+    QInputDialog,
 )
-from PyQt5.QtGui import QTextCursor, QTextCharFormat, QTextTableFormat
+from PyQt5.QtGui import QTextCharFormat, QTextImageFormat, QTextCursor
 from PyQt5.QtCore import Qt
 
 
@@ -71,6 +71,7 @@ class NoteApp(QMainWindow):
         file_menu = menubar.addMenu("File")
         edit_menu = menubar.addMenu("Edit")
         view_menu = menubar.addMenu("View")
+        help_menu = menubar.addMenu("Help")
 
         new_action = self.create_action("New", self.new_note, "Ctrl+N")
         open_action = self.create_action("Open", self.open_note, "Ctrl+O")
@@ -140,9 +141,12 @@ class NoteApp(QMainWindow):
         view_menu.addAction(font_action)
         view_menu.addAction(font_color_action)
 
+        help_action = self.create_action("Help", self.show_help_dialog, "F1")
+        help_menu.addAction(help_action)
+
     def create_toolbar(self):
-        toolbar = QToolBar("Formatting Toolbar")
-        self.addToolBar(toolbar)
+        formatting_toolbar = QToolBar("Formatting Toolbar")
+        self.addToolBar(Qt.BottomToolBarArea, formatting_toolbar)
 
         bold_action = self.create_action("Bold", self.toggle_bold, "Ctrl+B")
         italic_action = self.create_action("Italic", self.toggle_italic, "Ctrl+I")
@@ -152,14 +156,14 @@ class NoteApp(QMainWindow):
         font_size_action = self.create_action("Font Size", self.choose_font_size)
         font_color_action = self.create_action("Font Color", self.choose_font_color)
 
-        toolbar.addAction(bold_action)
-        toolbar.addAction(italic_action)
-        toolbar.addAction(underline_action)
-        toolbar.addAction(font_size_action)
-        toolbar.addAction(font_color_action)
+        formatting_toolbar.addAction(bold_action)
+        formatting_toolbar.addAction(italic_action)
+        formatting_toolbar.addAction(underline_action)
+        formatting_toolbar.addAction(font_size_action)
+        formatting_toolbar.addAction(font_color_action)
 
         find_replace_toolbar = QToolBar("Find and Replace")
-        self.addToolBar(find_replace_toolbar)
+        self.addToolBar(Qt.BottomToolBarArea, find_replace_toolbar)
 
         find_action = self.create_action("Find", self.show_find_dialog, "Ctrl+F")
         replace_action = self.create_action(
@@ -192,6 +196,9 @@ class NoteApp(QMainWindow):
         char_format = QTextCharFormat()
         char_format.setFontUnderline(not self.text_edit.fontUnderline())
         self.text_edit.mergeCurrentCharFormat(char_format)
+
+    def toggle_spell_check(self):
+        self.text_edit.setAcceptRichText(not self.text_edit.acceptRichText())
 
     def choose_font(self):
         font, ok = QFontDialog.getFont()
@@ -309,15 +316,19 @@ class NoteApp(QMainWindow):
         replace_dialog = ReplaceDialog(self)
         replace_dialog.exec_()
 
-    def toggle_spell_check(self):
-        self.text_edit.setCheckSpelling(not self.text_edit.checkSpelling())
-
     def view_html_source(self):
         html_source = self.text_edit.toHtml()
-        source_dialog = QPlainTextEdit()
-        source_dialog.setPlainText(html_source)
+        source_dialog = QDialog(self)
         source_dialog.setWindowTitle("HTML Source")
         source_dialog.setGeometry(100, 100, 800, 600)
+
+        source_layout = QVBoxLayout(source_dialog)
+        source_text_edit = QPlainTextEdit(source_dialog)
+        source_text_edit.setPlainText(html_source)
+
+        source_layout.addWidget(source_text_edit)
+        source_dialog.setLayout(source_layout)
+
         source_dialog.exec_()
 
     def insert_image(self):
@@ -413,6 +424,54 @@ class NoteApp(QMainWindow):
         """
         self.setStyleSheet(app_style)
 
+    def show_help_dialog(self):
+        help_text = """
+        Simple FW Notes
+        
+        This is a simple note-taking application with basic formatting options.
+
+        File Menu:
+        - New (Ctrl+N): Create a new note.
+        - Open (Ctrl+O): Open an existing note.
+        - Save (Ctrl+S): Save the current note.
+        - Save As... (Ctrl+Shift+S): Save the current note with a new name.
+        - Exit (Ctrl+Q): Exit the application.
+
+        Edit Menu:
+        - Undo (Ctrl+Z): Undo the last action.
+        - Redo (Ctrl+Shift+Z): Redo the last undone action.
+        - Cut (Ctrl+X): Cut the selected text.
+        - Copy (Ctrl+C): Copy the selected text.
+        - Paste (Ctrl+V): Paste the copied or cut text.
+        - Select All (Ctrl+A): Select all the text in the note.
+        - Find (Ctrl+F): Find text in the note.
+        - Replace (Ctrl+H): Replace text in the note.
+        - Spell Check (Ctrl+G): Toggle spell check.
+        
+        View Menu:
+        - View HTML Source (Ctrl+U): View the HTML source of the note.
+        - Insert Image (Ctrl+I): Insert an image into the note.
+        - Insert Table (Ctrl+T): Insert a table into the note.
+        - Dark Theme (Ctrl+D): Toggle dark theme for the application.
+        - Font: Change the font for the text.
+        - Font Color: Change the font color for the text.
+
+        Formatting Toolbar (Bottom):
+        - Bold (Ctrl+B): Toggle bold text.
+        - Italic (Ctrl+I): Toggle italic text.
+        - Underline (Ctrl+U): Toggle underline text.
+        - Font Size: Change the font size.
+        - Font Color: Change the font color.
+
+        Find and Replace Toolbar (Bottom):
+        - Find (Ctrl+F): Find text in the note.
+        - Replace (Ctrl+H): Replace text in the note.
+
+        Help Menu:
+        - Help (F1): Show this help message.
+        """
+        QMessageBox.information(self, "Help", help_text)
+
 
 class FindDialog(QDialog):
     def __init__(self, parent=None):
@@ -437,18 +496,14 @@ class FindDialog(QDialog):
         self.setLayout(layout)
 
     def find_text(self):
-        text_to_find = self.find_input.text()
-        if not text_to_find:
-            return
-
-        text_widget = self.parent().text_edit
-        cursor = text_widget.document().find(text_to_find)
-        self.results_list.clear()
-        while cursor.isValid():
-            result = cursor.block().text()
-            item = QListWidgetItem(result)
-            self.results_list.addItem(item)
-            cursor = text_widget.document().find(text_to_find, cursor)
+        text = self.find_input.text()
+        if text:
+            self.results_list.clear()
+            cursor = self.parent().text_edit.document().find(text)
+            while cursor.hasSelection():
+                item = QListWidgetItem(cursor.selectedText())
+                self.results_list.addItem(item)
+                cursor = self.parent().text_edit.document().find(text, cursor)
 
     def go_to_result(self, item):
         text_widget = self.parent().text_edit
@@ -489,31 +544,31 @@ class ReplaceDialog(QDialog):
         self.setLayout(layout)
 
     def find_text(self):
-        text_to_find = self.find_input.text()
-        if not text_to_find:
-            return
-
-        text_widget = self.parent().text_edit
-        cursor = text_widget.document().find(text_to_find)
-        self.results_list.clear()
-        while cursor.isValid():
-            result = cursor.block().text()
-            item = QListWidgetItem(result)
-            self.results_list.addItem(item)
-            cursor = text_widget.document().find(text_to_find, cursor)
+        text = self.find_input.text()
+        if text:
+            self.results_list.clear()
+            cursor = self.parent().text_edit.document().find(text)
+            while cursor.hasSelection():
+                item = QListWidgetItem(cursor.selectedText())
+                self.results_list.addItem(item)
+                cursor = self.parent().text_edit.document().find(text, cursor)
 
     def replace_text(self):
-        text_to_find = self.find_input.text()
-        text_to_replace = self.replace_input.text()
-        if not text_to_find:
-            return
-
         text_widget = self.parent().text_edit
         cursor = text_widget.textCursor()
+        text = text_widget.toPlainText()
+
+        find_text = self.find_input.text()
+        replace_text = self.replace_input.text()
+
+        new_text = text.replace(find_text, replace_text)
+
         cursor.beginEditBlock()
-        while cursor.selectedText() == text_to_find:
-            cursor.insertText(text_to_replace)
+        cursor.select(QTextCursor.Document)
+        cursor.removeSelectedText()
+        cursor.insertText(new_text)
         cursor.endEditBlock()
+
         self.find_text()
 
     def go_to_result(self, item):
