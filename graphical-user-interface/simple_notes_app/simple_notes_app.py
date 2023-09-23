@@ -9,16 +9,19 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
     QFileDialog,
-    QStatusBar,
-    QLabel,
-    QDialog,
+    QMenuBar,
+    QMenu,
     QToolBar,
     QListWidget,
     QListWidgetItem,
-    QMenu,
-    QActionGroup,
+    QDialog,
+    QLineEdit,
+    QPushButton,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
 )
-from PyQt5.QtGui import QTextCursor, QIcon
+from PyQt5.QtGui import QTextCursor
 
 
 class NoteApp(QMainWindow):
@@ -36,85 +39,21 @@ class NoteApp(QMainWindow):
         self.text_edit.textChanged.connect(self.text_changed)
         layout.addWidget(self.text_edit)
 
-        toolbar = QToolBar("Formatting Toolbar")
-        layout.addWidget(toolbar)
+        self.create_menu()
+        self.create_toolbar()
 
-        bold_action = self.create_action(
-            "Bold", self.toggle_bold, "Ctrl+B", icon="bold.png"
-        )
-        italic_action = self.create_action(
-            "Italic", self.toggle_italic, "Ctrl+I", icon="italic.png"
-        )
-        underline_action = self.create_action(
-            "Underline", self.toggle_underline, "Ctrl+U", icon="underline.png"
-        )
-        toolbar.addAction(bold_action)
-        toolbar.addAction(italic_action)
-        toolbar.addAction(underline_action)
-
-        # Add Cut, Copy, Paste, Undo, Redo, Select All actions
-        cut_action = self.create_action(
-            "Cut", self.text_edit.cut, "Ctrl+X", icon="cut.png"
-        )
-        copy_action = self.create_action(
-            "Copy", self.text_edit.copy, "Ctrl+C", icon="copy.png"
-        )
-        paste_action = self.create_action(
-            "Paste", self.text_edit.paste, "Ctrl+V", icon="paste.png"
-        )
-        undo_action = self.create_action(
-            "Undo", self.text_edit.undo, "Ctrl+Z", icon="undo.png"
-        )
-        redo_action = self.create_action(
-            "Redo", self.text_edit.redo, "Ctrl+Shift+Z", icon="redo.png"
-        )
-        select_all_action = self.create_action(
-            "Select All", self.text_edit.selectAll, "Ctrl+A", icon="select_all.png"
-        )
-        toolbar.addActions(
-            [
-                cut_action,
-                copy_action,
-                paste_action,
-                undo_action,
-                redo_action,
-                select_all_action,
-            ]
-        )
-
-        self.status_bar = QStatusBar()
+        self.status_bar = self.statusBar()
         self.word_count_label = QLabel()
         self.status_bar.addWidget(self.word_count_label)
         self.current_note_label = QLabel()
         self.status_bar.addPermanentWidget(self.current_note_label)
-        self.setStatusBar(self.status_bar)
 
         self.setCentralWidget(central_widget)
 
-        # Create a menu bar
-        menubar = self.menuBar()
-        file_menu = menubar.addMenu("File")
-        file_menu.addAction(
-            self.create_action("New", self.new_note, "Ctrl+N", icon="new.png")
-        )
-        file_menu.addAction(
-            self.create_action("Open", self.open_note, "Ctrl+O", icon="open.png")
-        )
-        file_menu.addAction(
-            self.create_action("Save", self.save_note, "Ctrl+S", icon="save.png")
-        )
-        file_menu.addAction(
-            self.create_action(
-                "Save As...", self.save_note_as, "Ctrl+Shift+S", icon="save_as.png"
-            )
-        )
-        file_menu.addSeparator()
-        file_menu.addAction(
-            self.create_action("Exit", qApp.quit, "Ctrl+Q", icon="exit.png")
-        )
-
         self.setWindowTitle("Simple Notes")
         self.setGeometry(100, 100, 800, 600)
+
+        self.current_file = None
 
     def init_database(self):
         self.connection = sqlite3.connect("notes.db")
@@ -124,13 +63,70 @@ class NoteApp(QMainWindow):
         )
         self.connection.commit()
 
-    def create_action(self, text, slot, shortcut=None, icon=None):
+    def create_menu(self):
+        menubar = self.menuBar()
+        file_menu = menubar.addMenu("File")
+        edit_menu = menubar.addMenu("Edit")
+
+        new_action = self.create_action("New", self.new_note, "Ctrl+N")
+        open_action = self.create_action("Open", self.open_note, "Ctrl+O")
+        save_action = self.create_action("Save", self.save_note, "Ctrl+S")
+        save_as_action = self.create_action(
+            "Save As...", self.save_note_as, "Ctrl+Shift+S"
+        )
+        exit_action = self.create_action("Exit", qApp.quit, "Ctrl+Q")
+
+        file_menu.addAction(new_action)
+        file_menu.addAction(open_action)
+        file_menu.addAction(save_action)
+        file_menu.addAction(save_as_action)
+        file_menu.addSeparator()
+        file_menu.addAction(exit_action)
+
+        undo_action = self.create_action("Undo", self.text_edit.undo, "Ctrl+Z")
+        redo_action = self.create_action("Redo", self.text_edit.redo, "Ctrl+Shift+Z")
+        cut_action = self.create_action("Cut", self.text_edit.cut, "Ctrl+X")
+        copy_action = self.create_action("Copy", self.text_edit.copy, "Ctrl+C")
+        paste_action = self.create_action("Paste", self.text_edit.paste, "Ctrl+V")
+        select_all_action = self.create_action(
+            "Select All", self.text_edit.selectAll, "Ctrl+A"
+        )
+        find_action = self.create_action("Find", self.show_find_dialog, "Ctrl+F")
+        replace_action = self.create_action(
+            "Replace", self.show_replace_dialog, "Ctrl+H"
+        )
+
+        edit_menu.addAction(undo_action)
+        edit_menu.addAction(redo_action)
+        edit_menu.addSeparator()
+        edit_menu.addAction(cut_action)
+        edit_menu.addAction(copy_action)
+        edit_menu.addAction(paste_action)
+        edit_menu.addSeparator()
+        edit_menu.addAction(select_all_action)
+        edit_menu.addSeparator()
+        edit_menu.addAction(find_action)
+        edit_menu.addAction(replace_action)
+
+    def create_toolbar(self):
+        toolbar = QToolBar("Formatting Toolbar")
+        self.addToolBar(toolbar)
+
+        bold_action = self.create_action("Bold", self.toggle_bold, "Ctrl+B")
+        italic_action = self.create_action("Italic", self.toggle_italic, "Ctrl+I")
+        underline_action = self.create_action(
+            "Underline", self.toggle_underline, "Ctrl+U"
+        )
+
+        toolbar.addAction(bold_action)
+        toolbar.addAction(italic_action)
+        toolbar.addAction(underline_action)
+
+    def create_action(self, text, slot, shortcut=None):
         action = QAction(text, self)
         action.triggered.connect(slot)
         if shortcut:
             action.setShortcut(shortcut)
-        if icon:
-            action.setIcon(QIcon(icon))
         return action
 
     def toggle_bold(self):
@@ -152,6 +148,7 @@ class NoteApp(QMainWindow):
 
     def new_note(self):
         self.text_edit.clear()
+        self.current_file = None
         self.update_word_count()
         self.current_note_label.clear()
 
@@ -166,33 +163,20 @@ class NoteApp(QMainWindow):
                 self.text_edit.setPlainText(file.read())
                 self.update_word_count()
                 self.current_note_label.setText(f"Current Note: {file_name}")
+                self.current_file = file_name
 
     def save_note(self):
         if not self.text_edit.toPlainText():
             return
 
-        if hasattr(self, "current_file"):
+        if self.current_file:
             file_name = self.current_file
             with open(file_name, "w") as file:
                 file.write(self.text_edit.toPlainText())
                 self.update_word_count()
                 self.current_note_label.setText(f"Current Note: {file_name}")
-
-        self.save_to_database()
-
-    def save_to_database(self):
-        content = self.text_edit.toPlainText()
-        self.cursor.execute("INSERT INTO notes (content) VALUES (?)", (content,))
-        self.connection.commit()
-        self.current_note_label.setText("Current Note: Saved to Database")
-
-    def load_from_database(self, note_id):
-        self.cursor.execute("SELECT content FROM notes WHERE id = ?", (note_id,))
-        note_content = self.cursor.fetchone()
-        if note_content:
-            self.text_edit.setPlainText(note_content[0])
-            self.update_word_count()
-            self.current_note_label.setText(f"Current Note: ID {note_id}")
+        else:
+            self.save_note_as()
 
     def save_note_as(self):
         options = QFileDialog.Options()
@@ -208,9 +192,31 @@ class NoteApp(QMainWindow):
         if file_name:
             with open(file_name, "w") as file:
                 file.write(self.text_edit.toPlainText())
-                self.current_file = file_name
                 self.update_word_count()
                 self.current_note_label.setText(f"Current Note: {file_name}")
+                self.current_file = file_name
+
+    def show_find_dialog(self):
+        find_dialog = FindDialog(self)
+        find_dialog.exec_()
+
+    def show_replace_dialog(self):
+        replace_dialog = ReplaceDialog(self)
+        replace_dialog.exec_()
+
+    def save_to_database(self):
+        content = self.text_edit.toPlainText()
+        self.cursor.execute("INSERT INTO notes (content) VALUES (?)", (content,))
+        self.connection.commit()
+        self.current_note_label.setText("Current Note: Saved to Database")
+
+    def load_from_database(self, note_id):
+        self.cursor.execute("SELECT content FROM notes WHERE id = ?", (note_id,))
+        note_content = self.cursor.fetchone()
+        if note_content:
+            self.text_edit.setPlainText(note_content[0])
+            self.update_word_count()
+            self.current_note_label.setText(f"Current Note: ID {note_id}")
 
     def show_notes_list(self):
         notes_list = NotesListDialog(self.connection, self.load_from_database)
@@ -219,6 +225,57 @@ class NoteApp(QMainWindow):
     def closeEvent(self, event):
         self.connection.close()
         event.accept()
+
+
+class FindDialog(QDialog):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.setWindowTitle("Find")
+        self.setGeometry(300, 300, 300, 100)
+        layout = QVBoxLayout()
+
+        self.find_text_edit = QLineEdit()
+        find_button = QPushButton("Find")
+        find_button.clicked.connect(self.find_text)
+
+        layout.addWidget(self.find_text_edit)
+        layout.addWidget(find_button)
+
+        self.setLayout(layout)
+
+    def find_text(self):
+        text_to_find = self.find_text_edit.text()
+        text = self.parent().text_edit.toPlainText()
+        cursor = self.parent().text_edit.textCursor()
+        found_cursor = cursor.document().find(text_to_find, cursor)
+        if found_cursor.hasSelection():
+            self.parent().text_edit.setTextCursor(found_cursor)
+
+
+class ReplaceDialog(QDialog):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.setWindowTitle("Replace")
+        self.setGeometry(300, 300, 300, 150)
+        layout = QVBoxLayout()
+
+        self.find_text_edit = QLineEdit()
+        self.replace_text_edit = QLineEdit()
+        replace_button = QPushButton("Replace")
+        replace_button.clicked.connect(self.replace_text)
+
+        layout.addWidget(self.find_text_edit)
+        layout.addWidget(self.replace_text_edit)
+        layout.addWidget(replace_button)
+
+        self.setLayout(layout)
+
+    def replace_text(self):
+        text_to_find = self.find_text_edit.text()
+        text_to_replace = self.replace_text_edit.text()
+        text = self.parent().text_edit.toPlainText()
+        text = text.replace(text_to_find, text_to_replace)
+        self.parent().text_edit.setPlainText(text)
 
 
 class NotesListDialog(QDialog):
