@@ -17,8 +17,6 @@ from PyQt5.QtWidgets import (
     QDialog,
     QLineEdit,
     QPushButton,
-    QVBoxLayout,
-    QHBoxLayout,
     QLabel,
 )
 from PyQt5.QtGui import QTextCursor
@@ -121,6 +119,17 @@ class NoteApp(QMainWindow):
         toolbar.addAction(bold_action)
         toolbar.addAction(italic_action)
         toolbar.addAction(underline_action)
+
+        find_replace_toolbar = QToolBar("Find and Replace")
+        self.addToolBar(find_replace_toolbar)
+
+        find_action = self.create_action("Find", self.show_find_dialog, "Ctrl+F")
+        replace_action = self.create_action(
+            "Replace", self.show_replace_dialog, "Ctrl+H"
+        )
+
+        find_replace_toolbar.addAction(find_action)
+        find_replace_toolbar.addAction(replace_action)
 
     def create_action(self, text, slot, shortcut=None):
         action = QAction(text, self)
@@ -276,43 +285,6 @@ class ReplaceDialog(QDialog):
         text = self.parent().text_edit.toPlainText()
         text = text.replace(text_to_find, text_to_replace)
         self.parent().text_edit.setPlainText(text)
-
-
-class NotesListDialog(QDialog):
-    def __init__(self, connection, load_note_callback):
-        super().__init__()
-
-        self.connection = connection
-        self.load_note_callback = load_note_callback
-        self.init_ui()
-
-    def init_ui(self):
-        self.setWindowTitle("Notes List")
-        self.setGeometry(200, 200, 400, 300)
-
-        layout = QVBoxLayout()
-
-        self.notes_list_widget = QListWidget()
-        self.populate_notes_list()
-        self.notes_list_widget.itemDoubleClicked.connect(self.load_note)
-
-        layout.addWidget(self.notes_list_widget)
-
-        self.setLayout(layout)
-
-    def populate_notes_list(self):
-        self.notes_list_widget.clear()
-        self.cursor = self.connection.cursor()
-        self.cursor.execute("SELECT id FROM notes")
-        notes = self.cursor.fetchall()
-        for note in notes:
-            item = QListWidgetItem(f"Note ID: {note[0]}")
-            self.notes_list_widget.addItem(item)
-
-    def load_note(self, item):
-        note_id = int(item.text().split()[-1])
-        self.load_note_callback(note_id)
-        self.accept()
 
 
 if __name__ == "__main__":
