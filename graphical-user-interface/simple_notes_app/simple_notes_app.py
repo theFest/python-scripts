@@ -15,8 +15,10 @@ from PyQt5.QtWidgets import (
     QToolBar,
     QListWidget,
     QListWidgetItem,
+    QMenu,
+    QActionGroup,
 )
-from PyQt5.QtGui import QTextCursor
+from PyQt5.QtGui import QTextCursor, QIcon
 
 
 class NoteApp(QMainWindow):
@@ -37,14 +39,48 @@ class NoteApp(QMainWindow):
         toolbar = QToolBar("Formatting Toolbar")
         layout.addWidget(toolbar)
 
-        bold_action = self.create_action("Bold", self.toggle_bold, "Ctrl+B")
-        italic_action = self.create_action("Italic", self.toggle_italic, "Ctrl+I")
+        bold_action = self.create_action(
+            "Bold", self.toggle_bold, "Ctrl+B", icon="bold.png"
+        )
+        italic_action = self.create_action(
+            "Italic", self.toggle_italic, "Ctrl+I", icon="italic.png"
+        )
         underline_action = self.create_action(
-            "Underline", self.toggle_underline, "Ctrl+U"
+            "Underline", self.toggle_underline, "Ctrl+U", icon="underline.png"
         )
         toolbar.addAction(bold_action)
         toolbar.addAction(italic_action)
         toolbar.addAction(underline_action)
+
+        # Add Cut, Copy, Paste, Undo, Redo, Select All actions
+        cut_action = self.create_action(
+            "Cut", self.text_edit.cut, "Ctrl+X", icon="cut.png"
+        )
+        copy_action = self.create_action(
+            "Copy", self.text_edit.copy, "Ctrl+C", icon="copy.png"
+        )
+        paste_action = self.create_action(
+            "Paste", self.text_edit.paste, "Ctrl+V", icon="paste.png"
+        )
+        undo_action = self.create_action(
+            "Undo", self.text_edit.undo, "Ctrl+Z", icon="undo.png"
+        )
+        redo_action = self.create_action(
+            "Redo", self.text_edit.redo, "Ctrl+Shift+Z", icon="redo.png"
+        )
+        select_all_action = self.create_action(
+            "Select All", self.text_edit.selectAll, "Ctrl+A", icon="select_all.png"
+        )
+        toolbar.addActions(
+            [
+                cut_action,
+                copy_action,
+                paste_action,
+                undo_action,
+                redo_action,
+                select_all_action,
+            ]
+        )
 
         self.status_bar = QStatusBar()
         self.word_count_label = QLabel()
@@ -55,7 +91,29 @@ class NoteApp(QMainWindow):
 
         self.setCentralWidget(central_widget)
 
-        self.setWindowTitle("Advanced Dark Theme Note App")
+        # Create a menu bar
+        menubar = self.menuBar()
+        file_menu = menubar.addMenu("File")
+        file_menu.addAction(
+            self.create_action("New", self.new_note, "Ctrl+N", icon="new.png")
+        )
+        file_menu.addAction(
+            self.create_action("Open", self.open_note, "Ctrl+O", icon="open.png")
+        )
+        file_menu.addAction(
+            self.create_action("Save", self.save_note, "Ctrl+S", icon="save.png")
+        )
+        file_menu.addAction(
+            self.create_action(
+                "Save As...", self.save_note_as, "Ctrl+Shift+S", icon="save_as.png"
+            )
+        )
+        file_menu.addSeparator()
+        file_menu.addAction(
+            self.create_action("Exit", qApp.quit, "Ctrl+Q", icon="exit.png")
+        )
+
+        self.setWindowTitle("Simple Notes")
         self.setGeometry(100, 100, 800, 600)
 
     def init_database(self):
@@ -66,11 +124,13 @@ class NoteApp(QMainWindow):
         )
         self.connection.commit()
 
-    def create_action(self, text, slot, shortcut=None):
+    def create_action(self, text, slot, shortcut=None, icon=None):
         action = QAction(text, self)
         action.triggered.connect(slot)
         if shortcut:
             action.setShortcut(shortcut)
+        if icon:
+            action.setIcon(QIcon(icon))
         return action
 
     def toggle_bold(self):
@@ -133,6 +193,24 @@ class NoteApp(QMainWindow):
             self.text_edit.setPlainText(note_content[0])
             self.update_word_count()
             self.current_note_label.setText(f"Current Note: ID {note_id}")
+
+    def save_note_as(self):
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        file_name, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Note As",
+            "",
+            "Text Files (*.txt);;All Files (*)",
+            options=options,
+        )
+
+        if file_name:
+            with open(file_name, "w") as file:
+                file.write(self.text_edit.toPlainText())
+                self.current_file = file_name
+                self.update_word_count()
+                self.current_note_label.setText(f"Current Note: {file_name}")
 
     def show_notes_list(self):
         notes_list = NotesListDialog(self.connection, self.load_from_database)
