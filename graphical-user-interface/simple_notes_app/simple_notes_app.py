@@ -237,9 +237,14 @@ class NoteApp(QMainWindow):
         font_size_action = self.create_action("Font Size", self.choose_font_size)
         font_color_action = self.create_action("Font Color", self.choose_font_color)
 
+        strikethrough_action = self.create_action(
+            "Strikethrough", self.toggle_strikethrough, "Ctrl+Shift+S"
+        )
+
         formatting_toolbar.addAction(bold_action)
         formatting_toolbar.addAction(italic_action)
         formatting_toolbar.addAction(underline_action)
+        formatting_toolbar.addAction(strikethrough_action)
         formatting_toolbar.addAction(font_size_action)
         formatting_toolbar.addAction(font_color_action)
 
@@ -280,6 +285,11 @@ class NoteApp(QMainWindow):
         char_format.setFontUnderline(not self.text_edit.fontUnderline())
         self.text_edit.mergeCurrentCharFormat(char_format)
         self.set_status_message("underline")
+
+    def toggle_strikethrough(self):
+        format = QTextCharFormat()
+        format.setFontStrikeOut(not self.text_edit.currentCharFormat().fontStrikeOut())
+        self.text_edit.mergeCurrentCharFormat(format)
 
     def toggle_spell_check(self):
         self.text_edit.setAcceptRichText(not self.text_edit.acceptRichText())
@@ -597,7 +607,7 @@ class NoteApp(QMainWindow):
         help_text = """
         Simple FW Notes
         
-        This is a simple note-taking app by theFest - v0.0.6
+        This is a simple note-taking app by theFest - v0.0.7
 
         File Menu:
         - New (Ctrl+N): Create a new note.
@@ -629,6 +639,7 @@ class NoteApp(QMainWindow):
         - Bold (Ctrl+B): Toggle bold text.
         - Italic (Ctrl+I): Toggle italic text.
         - Underline (Ctrl+U): Toggle underline text.
+        - Strikethrough (Ctrl+Shift+S): Toggle strikethrough text.
         - Font Size: Change the font size.
         - Font Color: Change the font color.
 
