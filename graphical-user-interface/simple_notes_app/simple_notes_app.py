@@ -144,15 +144,19 @@ class NoteApp(QMainWindow):
         insert_image_action = self.create_action(
             "Insert Image", self.insert_image, "Ctrl+I"
         )
+        insert_image_from_disk_action = self.create_action(
+            "From Disk", self.insert_image_from_disk, "Ctrl+I"
+        )
+        insert_image_from_url_action = self.create_action(
+            "From URL", self.insert_image_from_url, "Ctrl+U"
+        )
         insert_table_action = self.create_action(
             "Insert Table", self.insert_table, "Ctrl+T"
         )
         insert_list_action = self.create_action(
             "Insert List", self.insert_list, "Ctrl+L"
         )
-
         text_format_menu = view_menu.addMenu("Text Format")
-
         highlight_action = self.create_action(
             "Highlight", self.toggle_highlight, "Ctrl+H"
         )
@@ -162,17 +166,14 @@ class NoteApp(QMainWindow):
             "Align Left", self.align_text_left, "Ctrl+Shift+L"
         )
         text_format_menu.addAction(align_left_action)
-
         align_center_action = self.create_action(
             "Align Center", self.align_text_center, "Ctrl+Shift+C"
         )
         text_format_menu.addAction(align_center_action)
-
         align_right_action = self.create_action(
             "Align Right", self.align_text_right, "Ctrl+Shift+R"
         )
         text_format_menu.addAction(align_right_action)
-
         increase_indent_action = self.create_action(
             "Increase Indent", self.increase_text_indent, "Ctrl+]"
         )
@@ -197,10 +198,10 @@ class NoteApp(QMainWindow):
         edit_menu.addSeparator()
         edit_menu.addAction(spell_check_action)
 
-        view_menu.addAction(view_html_action)
-        view_menu.addAction(insert_image_action)
-        view_menu.addAction(insert_table_action)
+        insert_image_menu = view_menu.addMenu("Insert Image")
         view_menu.addAction(insert_list_action)
+        view_menu.addAction(insert_table_action)
+        view_menu.addAction(view_html_action)
 
         view_menu.addSeparator()
 
@@ -210,6 +211,9 @@ class NoteApp(QMainWindow):
         view_menu.addAction(font_color_action)
 
         view_menu.addSeparator()
+
+        insert_image_menu.addAction(insert_image_from_disk_action)
+        insert_image_menu.addAction(insert_image_from_url_action)
 
         dark_theme_action = self.create_action(
             "Dark Theme", self.toggle_dark_theme, "Ctrl+D"
@@ -432,7 +436,7 @@ class NoteApp(QMainWindow):
         options = QFileDialog.Options()
         file_name, _ = QFileDialog.getOpenFileName(
             self,
-            "Insert Image",
+            "Insert Image from Disk",
             "",
             "Image Files (*.png *.jpg *.jpeg *.gif *.bmp)",
             options=options,
@@ -441,6 +445,39 @@ class NoteApp(QMainWindow):
             cursor = self.text_edit.textCursor()
             image_format = QTextImageFormat()
             image_format.setName(file_name)
+            cursor.insertImage(image_format)
+
+            self.set_status_message("image_inserted")
+
+    def insert_image_from_disk(self):
+        options = QFileDialog.Options()
+        file_name, _ = QFileDialog.getOpenFileName(
+            self,
+            "Insert Image from Disk",
+            "",
+            "Image Files (*.png *.jpg *.jpeg *.gif *.bmp)",
+            options=options,
+        )
+        if file_name:
+            cursor = self.text_edit.textCursor()
+            image_format = QTextImageFormat()
+            image_format.setName(file_name)
+            image_format.setWidth(300)
+            image_format.setHeight(200)
+            cursor.insertImage(image_format)
+
+            self.set_status_message("image_inserted")
+
+    def insert_image_from_url(self):
+        url, ok = QInputDialog.getText(
+            self,
+            "Insert Image from URL",
+            "Enter the URL of the image:",
+        )
+        if ok:
+            cursor = self.text_edit.textCursor()
+            image_format = QTextImageFormat()
+            image_format.setName(url)
             image_format.setWidth(300)
             image_format.setHeight(200)
             cursor.insertImage(image_format)
@@ -607,7 +644,7 @@ class NoteApp(QMainWindow):
         help_text = """
         Simple FW Notes
         
-        This is a simple note-taking app by theFest - v0.0.7
+        This is a simple note-taking app by theFest - v0.0.8
 
         File Menu:
         - New (Ctrl+N): Create a new note.
@@ -636,9 +673,9 @@ class NoteApp(QMainWindow):
         - Font Color: Change the font color for the text.
 
         Formatting Toolbar (Bottom):
-        - Bold (Ctrl+B): Toggle bold text.
-        - Italic (Ctrl+I): Toggle italic text.
-        - Underline (Ctrl+U): Toggle underline text.
+        - Bold (Ctrl+Shift+B): Toggle bold text.
+        - Italic (Ctrl+Shift+I): Toggle italic text.
+        - Underline (Ctrl+Shift+U): Toggle underline text.
         - Strikethrough (Ctrl+Shift+S): Toggle strikethrough text.
         - Font Size: Change the font size.
         - Font Color: Change the font color.
